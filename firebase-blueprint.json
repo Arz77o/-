@@ -1,0 +1,42 @@
+{
+  "collections": [
+    {
+      "name": "products",
+      "description": "Products available in the store",
+      "fields": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "imageUrl": { "type": "string" },
+        "stock": { "type": "number" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "securityRules": {
+        "read": "true",
+        "write": "request.auth != null && request.auth.uid != null"
+      }
+    },
+    {
+      "name": "orders",
+      "description": "Customer orders (Cash on Delivery)",
+      "fields": {
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "quantity": { "type": "number" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "customerAddress": { "type": "string" },
+        "customerWilaya": { "type": "string" },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string", "description": "e.g., pending, confirmed, shipped, delivered, cancelled" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "securityRules": {
+        "read": "request.auth != null && request.auth.uid != null",
+        "create": "true",
+        "update": "request.auth != null && request.auth.uid != null",
+        "delete": "request.auth != null && request.auth.uid != null"
+      }
+    }
+  ]
+}
