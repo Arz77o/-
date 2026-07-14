@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { doc, getDoc, addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { supabase } from "../lib/supabase";
 import { Product } from "../types";
 import { wilayas } from "../lib/data";
 import { ArrowRight, Loader2, CheckCircle2, ShieldCheck, Truck } from "lucide-react";
@@ -13,6 +12,7 @@ export default function ProductPage() {
   
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -28,13 +28,19 @@ export default function ProductPage() {
     const fetchProduct = async () => {
       if (!id) return;
       try {
-        const docRef = doc(db, "products", id);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setProduct({ id: docSnap.id, ...docSnap.data() } as Product);
+        const { data, error: fetchError } = await supabase
+          .from('products')
+          .select('*')
+          .eq('id', id)
+          .single();
+
+        if (fetchError) throw fetchError;
+        if (data) {
+          setProduct(data as Product);
         }
-      } catch (error) {
-        console.error("Error fetching product:", error);
+      } catch (err: any) {
+        console.error("Error fetching product:", JSON.stringify(err, null, 2));
+        setError(err.message || "حدث خطأ أثناء جلب المنتج.");
       } finally {
         setLoading(false);
       }
@@ -51,7 +57,7 @@ export default function ProductPage() {
     try {
       const totalAmount = product.price * quantity;
       
-      await addDoc(collection(db, "orders"), {
+      const { error } = await supabase.from('orders').insert([{
         productId: product.id,
         productName: product.name,
         quantity,
@@ -61,8 +67,10 @@ export default function ProductPage() {
         customerWilaya: formData.wilaya,
         totalAmount,
         status: "pending",
-        createdAt: serverTimestamp()
-      });
+        createdAt: new Date().toISOString()
+      }]);
+
+      if (error) throw error;
 
       setSuccess(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -78,6 +86,20 @@ export default function ProductPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
+        <div className="bg-red-50 text-red-600 p-6 rounded-xl border border-red-200 max-w-md w-full text-center">
+          <h2 className="text-xl font-bold mb-2">خطأ في جلب المنتج</h2>
+          <p className="text-sm mb-4" dir="ltr">{error}</p>
+          <button onClick={() => navigate('/')} className="text-emerald-600 hover:underline font-bold">
+            العودة للرئيسية
+          </button>
+        </div>
       </div>
     );
   }

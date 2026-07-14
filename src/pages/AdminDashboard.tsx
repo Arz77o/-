@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { collection, query, orderBy, onSnapshot, updateDoc, doc, addDoc, serverTimestamp, deleteDoc } from "firebase/firestore";
-import { signOut } from "firebase/auth";
-import { db, auth } from "../lib/firebase";
+import { supabase } from "../lib/supabase";
 import { Order, Product } from "../types";
 import { useNavigate } from "react-router-dom";
 import { Package, ShoppingCart, LogOut, Plus, Trash2, Edit2, Loader2 } from "lucide-react";
@@ -14,6 +12,7 @@ export default function AdminDashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // New Product Form State
   const [showAddProduct, setShowAddProduct] = useState(false);
@@ -21,32 +20,56 @@ export default function AdminDashboard() {
     name: "", description: "", price: 0, imageUrl: "", stock: 100
   });
 
-  useEffect(() => {
-    const qOrders = query(collection(db, "orders"), orderBy("createdAt", "desc"));
-    const unsubOrders = onSnapshot(qOrders, (snapshot) => {
-      setOrders(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order)));
-    });
+  const fetchData = async () => {
+    try {
+      const [ordersRes, productsRes] = await Promise.all([
+        supabase.from('orders').select('*').order('createdAt', { ascending: false }),
+        supabase.from('products').select('*').order('createdAt', { ascending: false })
+      ]);
 
-    const qProducts = query(collection(db, "products"), orderBy("createdAt", "desc"));
-    const unsubProducts = onSnapshot(qProducts, (snapshot) => {
-      setProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product)));
+      if (ordersRes.error) throw ordersRes.error;
+      if (productsRes.error) throw productsRes.error;
+
+      if (ordersRes.data) setOrders(ordersRes.data as Order[]);
+      if (productsRes.data) setProducts(productsRes.data as Product[]);
+    } catch (err: any) {
+      console.error("Error fetching data:", JSON.stringify(err, null, 2));
+      setError(err.message || "حدث خطأ أثناء جلب البيانات.");
+    } finally {
       setLoading(false);
-    });
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+
+    const ordersSub = supabase.channel('orders_channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, payload => {
+        fetchData();
+      })
+      .subscribe();
+
+    const productsSub = supabase.channel('products_channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, payload => {
+        fetchData();
+      })
+      .subscribe();
 
     return () => {
-      unsubOrders();
-      unsubProducts();
+      supabase.removeChannel(ordersSub);
+      supabase.removeChannel(productsSub);
     };
   }, []);
 
   const handleLogout = async () => {
-    await signOut(auth);
+    await supabase.auth.signOut();
     navigate("/admin/login");
   };
 
   const updateOrderStatus = async (orderId: string, status: Order['status']) => {
     try {
-      await updateDoc(doc(db, "orders", orderId), { status });
+      await supabase.from('orders').update({ status }).eq('id', orderId);
+      fetchData();
     } catch (error) {
       console.error("Error updating order:", error);
     }
@@ -55,12 +78,13 @@ export default function AdminDashboard() {
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await addDoc(collection(db, "products"), {
+      await supabase.from('products').insert([{
         ...newProduct,
-        createdAt: serverTimestamp()
-      });
+        createdAt: new Date().toISOString()
+      }]);
       setShowAddProduct(false);
       setNewProduct({ name: "", description: "", price: 0, imageUrl: "", stock: 100 });
+      fetchData();
     } catch (error) {
       console.error("Error adding product:", error);
     }
@@ -69,7 +93,8 @@ export default function AdminDashboard() {
   const deleteProduct = async (productId: string) => {
     if (confirm("هل أنت متأكد من حذف هذا المنتج؟")) {
       try {
-        await deleteDoc(doc(db, "products", productId));
+        await supabase.from('products').delete().eq('id', productId);
+        fetchData();
       } catch (error) {
         console.error("Error deleting product:", error);
       }
@@ -80,6 +105,20 @@ export default function AdminDashboard() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
+        <div className="bg-red-50 text-red-600 p-6 rounded-xl border border-red-200 max-w-md w-full text-center">
+          <h2 className="text-xl font-bold mb-2">خطأ في جلب البيانات</h2>
+          <p className="text-sm mb-4" dir="ltr">{error}</p>
+          <button onClick={() => window.location.reload()} className="text-emerald-600 hover:underline font-bold">
+            إعادة المحاولة
+          </button>
+        </div>
       </div>
     );
   }

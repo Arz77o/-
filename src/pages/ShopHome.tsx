@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { supabase } from "../lib/supabase";
 import { Product } from "../types";
 import { Link } from "react-router-dom";
 import { Loader2, ShoppingBag } from "lucide-react";
@@ -8,16 +7,21 @@ import { Loader2, ShoppingBag } from "lucide-react";
 export default function ShopHome() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
-        const snapshot = await getDocs(q);
-        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
-        setProducts(data);
-      } catch (error) {
-        console.error("Error fetching products:", error);
+        const { data, error: fetchError } = await supabase
+          .from('products')
+          .select('*')
+          .order('createdAt', { ascending: false });
+        
+        if (fetchError) throw fetchError;
+        if (data) setProducts(data as Product[]);
+      } catch (err: any) {
+        console.error("Error fetching products:", JSON.stringify(err, null, 2));
+        setError(err.message || "حدث خطأ أثناء جلب المنتجات. يرجى التحقق من إعدادات Supabase الخاصة بك.");
       } finally {
         setLoading(false);
       }
@@ -40,7 +44,13 @@ export default function ShopHome() {
       <main className="max-w-5xl mx-auto px-4 mt-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">أحدث المنتجات</h1>
         
-        {loading ? (
+        {error ? (
+          <div className="bg-red-50 text-red-600 p-6 rounded-xl border border-red-200">
+            <p className="font-bold mb-2">خطأ في الاتصال بقاعدة البيانات</p>
+            <p className="text-sm" dir="ltr">{error}</p>
+            <p className="text-sm mt-4">يرجى التأكد من إضافة مفاتيح Supabase الخاصة بك في إعدادات التطبيق (Environment Variables).</p>
+          </div>
+        ) : loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
           </div>

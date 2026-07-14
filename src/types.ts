@@ -1,5 +1,3 @@
-import { Timestamp } from "firebase/firestore";
-
 export interface Product {
   id: string;
   name: string;
@@ -7,7 +5,7 @@ export interface Product {
   price: number;
   imageUrl: string;
   stock: number;
-  createdAt: Timestamp;
+  createdAt: string;
 }
 
 export interface Order {
@@ -21,5 +19,5 @@ export interface Order {
   customerWilaya: string;
   totalAmount: number;
   status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
-  createdAt: Timestamp;
+  createdAt: string;
 }
