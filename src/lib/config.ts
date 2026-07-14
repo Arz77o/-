@@ -4,10 +4,10 @@ export const STORE_CONFIG = {
   socials: {
     facebook: "https://facebook.com/yourpage",
     instagram: "https://instagram.com/yourprofile",
-    whatsapp: "https://wa.me/213555555555", // Replace with real phone number (e.g., https://wa.me/213XXXXXXXXX)
+    whatsapp: "https://wa.me/213774422923", // Replace with real phone number (e.g., https://wa.me/213XXXXXXXXX)
   },
   contact: {
-    phone: "0555555555",
+    phone: "0774422923",
     email: "contact@yourstore.com"
   }
 };
