@@ -6,6 +6,8 @@ export interface Product {
   imageUrl: string;
   images?: string[];
   stock: number;
+  sizes?: string[];
+  colors?: string[];
   createdAt: string;
 }
 
@@ -20,5 +22,7 @@ export interface Order {
   customerWilaya: string;
   totalAmount: number;
   status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
+  selectedSize?: string;
+  selectedColor?: string;
   createdAt: string;
 }

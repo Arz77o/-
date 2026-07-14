@@ -20,8 +20,10 @@ export default function AdminDashboard() {
   // New Product Form State
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [newProduct, setNewProduct] = useState({
-    name: "", description: "", price: 0, imageUrl: "", images: [] as string[], stock: 100
+    name: "", description: "", price: 0, imageUrl: "", images: [] as string[], stock: 100, sizes: [] as string[], colors: [] as string[]
   });
+  const [sizesInput, setSizesInput] = useState("");
+  const [colorsInput, setColorsInput] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingAdditional, setUploadingAdditional] = useState(false);
   const [additionalUrlInput, setAdditionalUrlInput] = useState("");
@@ -31,6 +33,8 @@ export default function AdminDashboard() {
   const [editUploadingImage, setEditUploadingImage] = useState(false);
   const [editUploadingAdditional, setEditUploadingAdditional] = useState(false);
   const [editAdditionalUrlInput, setEditAdditionalUrlInput] = useState("");
+  const [editSizesInput, setEditSizesInput] = useState("");
+  const [editColorsInput, setEditColorsInput] = useState("");
 
   const fetchData = async () => {
     try {
@@ -186,7 +190,9 @@ export default function AdminDashboard() {
         createdAt: new Date().toISOString()
       }]);
       setShowAddProduct(false);
-      setNewProduct({ name: "", description: "", price: 0, imageUrl: "", images: [] as string[], stock: 100 });
+      setNewProduct({ name: "", description: "", price: 0, imageUrl: "", images: [] as string[], stock: 100, sizes: [] as string[], colors: [] as string[] });
+      setSizesInput("");
+      setColorsInput("");
       fetchData();
     } catch (error) {
       console.error("Error adding product:", error);
@@ -205,7 +211,9 @@ export default function AdminDashboard() {
           description: editingProduct.description,
           imageUrl: editingProduct.imageUrl,
           images: editingProduct.images,
-          stock: editingProduct.stock
+          stock: editingProduct.stock,
+          sizes: editingProduct.sizes,
+          colors: editingProduct.colors,
         })
         .eq('id', editingProduct.id);
       
@@ -445,6 +453,7 @@ export default function AdminDashboard() {
                   <tr className="bg-gray-50 border-b border-gray-200 text-gray-600 text-sm">
                     <th className="p-4 font-medium">العميل</th>
                     <th className="p-4 font-medium">المنتج</th>
+                    <th className="p-4 font-medium">المقاس / اللون</th>
                     <th className="p-4 font-medium">الولاية</th>
                     <th className="p-4 font-medium">المبلغ</th>
                     <th className="p-4 font-medium">الحالة</th>
@@ -461,6 +470,14 @@ export default function AdminDashboard() {
                       <td className="p-4">
                         <div className="font-medium text-gray-900">{order.productName}</div>
                         <div className="text-sm text-gray-500">الكمية: {order.quantity}</div>
+                      </td>
+                      <td className="p-4">
+                        <div className="text-sm text-gray-700">
+                          {order.selectedSize && <span>المقاس: {order.selectedSize}</span>}
+                          {order.selectedSize && order.selectedColor && <span> | </span>}
+                          {order.selectedColor && <span>اللون: {order.selectedColor}</span>}
+                          {!order.selectedSize && !order.selectedColor && <span className="text-gray-400">—</span>}
+                        </div>
                       </td>
                       <td className="p-4">
                         <div className="text-gray-900">{order.customerWilaya}</div>
@@ -493,7 +510,7 @@ export default function AdminDashboard() {
                   ))}
                   {orders.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="p-8 text-center text-gray-500">لا توجد طلبات حاليا</td>
+                      <td colSpan={7} className="p-8 text-center text-gray-500">لا توجد طلبات حاليا</td>
                     </tr>
                   )}
                 </tbody>
@@ -573,6 +590,76 @@ export default function AdminDashboard() {
                     )}
                   </div>
 
+                  {/* المقاسات */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">المقاسات المتاحة</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="مثال: S, M, L, XL"
+                        value={sizesInput}
+                        onChange={e => setSizesInput(e.target.value)}
+                        className="flex-1 px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 bg-gray-50 focus:bg-white transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const parts = sizesInput.split(',').map(s => s.trim()).filter(Boolean);
+                          setNewProduct(prev => ({ ...prev, sizes: [...new Set([...prev.sizes, ...parts])] }));
+                          setSizesInput("");
+                        }}
+                        className="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg text-sm font-medium"
+                      >
+                        إضافة
+                      </button>
+                    </div>
+                    {newProduct.sizes.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {newProduct.sizes.map((s, i) => (
+                          <span key={i} className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-xs font-medium">
+                            {s}
+                            <button type="button" onClick={() => setNewProduct(prev => ({ ...prev, sizes: prev.sizes.filter((_, j) => j !== i) }))} className="text-emerald-400 hover:text-red-500">&times;</button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* الألوان */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">الألوان المتاحة</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="مثال: أحمر, أزرق, أسود"
+                        value={colorsInput}
+                        onChange={e => setColorsInput(e.target.value)}
+                        className="flex-1 px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 bg-gray-50 focus:bg-white transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const parts = colorsInput.split(',').map(s => s.trim()).filter(Boolean);
+                          setNewProduct(prev => ({ ...prev, colors: [...new Set([...prev.colors, ...parts])] }));
+                          setColorsInput("");
+                        }}
+                        className="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg text-sm font-medium"
+                      >
+                        إضافة
+                      </button>
+                    </div>
+                    {newProduct.colors.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {newProduct.colors.map((c, i) => (
+                          <span key={i} className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-medium">
+                            {c}
+                            <button type="button" onClick={() => setNewProduct(prev => ({ ...prev, colors: prev.colors.filter((_, j) => j !== i) }))} className="text-blue-400 hover:text-red-500">&times;</button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">المخزون المتوفر</label>
                     <input type="number" required min="0" value={newProduct.stock} onChange={e => setNewProduct({...newProduct, stock: Number(e.target.value)})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 bg-gray-50 focus:bg-white transition-all" />
@@ -646,6 +733,76 @@ export default function AdminDashboard() {
                     )}
                   </div>
 
+                  {/* المقاسات - تعديل */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">المقاسات المتاحة</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="مثال: S, M, L, XL"
+                        value={editSizesInput}
+                        onChange={e => setEditSizesInput(e.target.value)}
+                        className="flex-1 px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const parts = editSizesInput.split(',').map(s => s.trim()).filter(Boolean);
+                            setEditingProduct(prev => prev ? ({ ...prev, sizes: [...new Set([...(prev.sizes || []), ...parts])] }) : null);
+                            setEditSizesInput("");
+                        }}
+                        className="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg text-sm font-medium"
+                      >
+                        إضافة
+                      </button>
+                    </div>
+                    {editingProduct.sizes && editingProduct.sizes.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {editingProduct.sizes.map((s, i) => (
+                          <span key={i} className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-xs font-medium">
+                            {s}
+                            <button type="button" onClick={() => setEditingProduct(prev => prev ? ({ ...prev, sizes: (prev.sizes || []).filter((_, j) => j !== i) }) : null)} className="text-emerald-400 hover:text-red-500">&times;</button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* الألوان - تعديل */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">الألوان المتاحة</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="مثال: أحمر, أزرق, أسود"
+                        value={editColorsInput}
+                        onChange={e => setEditColorsInput(e.target.value)}
+                        className="flex-1 px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const parts = editColorsInput.split(',').map(s => s.trim()).filter(Boolean);
+                            setEditingProduct(prev => prev ? ({ ...prev, colors: [...new Set([...(prev.colors || []), ...parts])] }) : null);
+                            setEditColorsInput("");
+                        }}
+                        className="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg text-sm font-medium"
+                      >
+                        إضافة
+                      </button>
+                    </div>
+                    {editingProduct.colors && editingProduct.colors.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {editingProduct.colors.map((c, i) => (
+                          <span key={i} className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-medium">
+                            {c}
+                            <button type="button" onClick={() => setEditingProduct(prev => prev ? ({ ...prev, colors: (prev.colors || []).filter((_, j) => j !== i) }) : null)} className="text-blue-400 hover:text-red-500">&times;</button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">المخزون المتوفر</label>
                     <input type="number" required min="0" value={editingProduct.stock || 0} onChange={e => setEditingProduct({...editingProduct, stock: Number(e.target.value)})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition-all" />
@@ -673,6 +830,28 @@ export default function AdminDashboard() {
                     <div className="text-emerald-600 font-bold mb-3">{product.price.toLocaleString('ar-DZ')} د.ج</div>
                     <div className="text-sm text-gray-500 mb-4 line-clamp-2">{product.description}</div>
                     
+                    {/* عرض المقاسات والألوان في بطاقة المنتج */}
+                    {(product.sizes && product.sizes.length > 0) && (
+                      <div className="mb-2">
+                        <span className="text-xs text-gray-500">المقاسات: </span>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {product.sizes.map((s, i) => (
+                            <span key={i} className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs">{s}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {(product.colors && product.colors.length > 0) && (
+                      <div className="mb-3">
+                        <span className="text-xs text-gray-500">الألوان: </span>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {product.colors.map((c, i) => (
+                            <span key={i} className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs">{c}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="mt-auto flex items-center justify-between pt-4 border-t border-gray-100">
                       <span className="text-sm text-gray-600">المخزون: {product.stock}</span>
                       <div className="flex gap-1">
@@ -680,7 +859,8 @@ export default function AdminDashboard() {
                           type="button"
                           onClick={() => {
                             setEditingProduct(product);
-                            // Scroll up smoothly to see the editing form
+                            setEditSizesInput("");
+                            setEditColorsInput("");
                             setTimeout(() => {
                               const el = document.getElementById("edit-product-section");
                               if (el) {

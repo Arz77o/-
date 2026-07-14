@@ -21,6 +21,8 @@ export default function ProductPage() {
   const [success, setSuccess] = useState(false);
 
   const [quantity, setQuantity] = useState(1);
+  const [selectedSize, setSelectedSize] = useState<string>("");
+  const [selectedColor, setSelectedColor] = useState<string>("");
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -96,6 +98,8 @@ export default function ProductPage() {
           productId: product.id,
           productName: product.name,
           quantity,
+          selectedSize: selectedSize || null,
+          selectedColor: selectedColor || null,
           customerName: formData.name,
           customerPhone: formData.phone,
           customerAddress: `طريقة التوصيل: ${formData.shippingType === 'home' ? 'للمنزل' : 'لمكتب الشحن'} | تكلفة الشحن: ${shippingCost} د.ج | البلدية: ${formData.baladiya} | تفاصيل العنوان: ${formData.address}`,
@@ -333,6 +337,68 @@ export default function ProductPage() {
 
                 <form onSubmit={handleSubmit} className="space-y-5">
                   
+                  {/* Size Selector */}
+                  {product.sizes && product.sizes.length > 0 && (
+                    <div className="bg-gray-50/50 p-3.5 rounded-2xl border border-gray-100">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-xs font-bold text-gray-700">
+                          اختر المقاس <span className="text-rose-500">*</span>
+                        </label>
+                        {selectedSize && (
+                          <span className="text-xs text-emerald-600 font-medium">المقاس المختار: {selectedSize}</span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-2" dir="ltr">
+                        {product.sizes.map((size) => (
+                          <button
+                            key={size}
+                            type="button"
+                            onClick={() => setSelectedSize(size)}
+                            className={cn(
+                              "px-4 py-2 rounded-xl border-2 text-sm font-bold transition-all shadow-sm",
+                              selectedSize === size
+                                ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                                : "border-gray-200 bg-white text-gray-700 hover:border-emerald-300"
+                            )}
+                          >
+                            {size}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Color Selector */}
+                  {product.colors && product.colors.length > 0 && (
+                    <div className="bg-gray-50/50 p-3.5 rounded-2xl border border-gray-100">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-xs font-bold text-gray-700">
+                          اختر اللون <span className="text-rose-500">*</span>
+                        </label>
+                        {selectedColor && (
+                          <span className="text-xs text-emerald-600 font-medium">اللون المختار: {selectedColor}</span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {product.colors.map((color) => (
+                          <button
+                            key={color}
+                            type="button"
+                            onClick={() => setSelectedColor(color)}
+                            className={cn(
+                              "px-4 py-2 rounded-xl border-2 text-sm font-bold transition-all shadow-sm",
+                              selectedColor === color
+                                ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                                : "border-gray-200 bg-white text-gray-700 hover:border-emerald-300"
+                            )}
+                          >
+                            {color}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Quantity selector */}
                   <div className="bg-gray-50/50 p-3.5 rounded-2xl border border-gray-100 flex items-center justify-between">
                     <div>
