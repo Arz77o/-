@@ -24,9 +24,26 @@ CREATE TABLE orders (
   "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Create shipping_rates table
+CREATE TABLE shipping_rates (
+  wilaya_id TEXT PRIMARY KEY,
+  home_price NUMERIC NOT NULL DEFAULT 800,
+  desk_price NUMERIC NOT NULL DEFAULT 400
+);
+
 -- Enable RLS
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE shipping_rates ENABLE ROW LEVEL SECURITY;
+
+-- Create policies for shipping_rates
+CREATE POLICY "Public shipping_rates are viewable by everyone."
+  ON shipping_rates FOR SELECT
+  USING ( true );
+
+CREATE POLICY "shipping_rates are updatable by authenticated users only."
+  ON shipping_rates FOR ALL
+  USING ( auth.role() = 'authenticated' );
 
 -- Create policies for products
 CREATE POLICY "Public products are viewable by everyone."

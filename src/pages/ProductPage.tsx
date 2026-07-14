@@ -1,16 +1,18 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { Product } from "../types";
-import { wilayas } from "../lib/data";
+import { wilayas, getCommunesByWilayaId } from 'algeria-locations';
 import { ArrowRight, Loader2, CheckCircle2, ShieldCheck, Truck } from "lucide-react";
 import { cn } from "../lib/utils";
+import { getShippingRates, ShippingRate } from "../lib/shipping";
 
 export default function ProductPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
   const [product, setProduct] = useState<Product | null>(null);
+  const [shippingRates, setShippingRates] = useState<ShippingRate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -21,33 +23,41 @@ export default function ProductPage() {
     name: "",
     phone: "",
     address: "",
-    wilaya: wilayas[15] // Default to Algiers (index 15)
+    wilayaId: "16", // Default to Algiers (id: 16)
+    baladiya: "",
+    shippingType: "home"
   });
 
   useEffect(() => {
-    const fetchProduct = async () => {
+    const fetchData = async () => {
       if (!id) return;
       try {
-        const { data, error: fetchError } = await supabase
-          .from('products')
-          .select('*')
-          .eq('id', id)
-          .single();
+        const [productRes, ratesRes] = await Promise.all([
+          supabase.from('products').select('*').eq('id', id).single(),
+          getShippingRates()
+        ]);
 
-        if (fetchError) throw fetchError;
-        if (data) {
-          setProduct(data as Product);
+        if (productRes.error) throw productRes.error;
+        if (productRes.data) {
+          setProduct(productRes.data as Product);
         }
+        setShippingRates(ratesRes);
       } catch (err: any) {
-        console.error("Error fetching product:", JSON.stringify(err, null, 2));
+        console.error("Error fetching data:", JSON.stringify(err, null, 2));
         setError(err.message || "حدث خطأ أثناء جلب المنتج.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchProduct();
+    fetchData();
   }, [id]);
+
+  const shippingCost = useMemo(() => {
+    const rate = shippingRates.find(r => r.wilaya_id === formData.wilayaId);
+    if (!rate) return formData.shippingType === 'home' ? 800 : 400; // default fallback
+    return formData.shippingType === 'home' ? rate.home_price : rate.desk_price;
+  }, [shippingRates, formData.wilayaId, formData.shippingType]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,16 +65,20 @@ export default function ProductPage() {
 
     setSubmitting(true);
     try {
-      const totalAmount = product.price * quantity;
+      const productTotal = product.price * quantity;
+      const totalAmount = productTotal + Number(shippingCost);
       
+      const selectedWilaya = wilayas.find(w => w.id.toString() === formData.wilayaId);
+      const wilayaName = selectedWilaya ? selectedWilaya.name_ar : formData.wilayaId;
+
       const { error } = await supabase.from('orders').insert([{
         productId: product.id,
         productName: product.name,
         quantity,
         customerName: formData.name,
         customerPhone: formData.phone,
-        customerAddress: formData.address,
-        customerWilaya: formData.wilaya,
+        customerAddress: `طريقة التوصيل: ${formData.shippingType === 'home' ? 'للمنزل' : 'لمكتب الشحن'} | تكلفة الشحن: ${shippingCost} د.ج | البلدية: ${formData.baladiya} | تفاصيل العنوان: ${formData.address}`,
+        customerWilaya: wilayaName,
         totalAmount,
         status: "pending",
         createdAt: new Date().toISOString()
@@ -258,30 +272,64 @@ export default function ProductPage() {
                   </div>
 
                   <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-2">
+                      طريقة التوصيل
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <label className={`flex items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all ${formData.shippingType === 'home' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-200 hover:border-emerald-200'}`}>
+                        <input type="radio" name="shippingType" value="home" checked={formData.shippingType === 'home'} onChange={(e) => setFormData({...formData, shippingType: e.target.value})} className="hidden" />
+                        <span className="font-medium text-sm">توصيل للمنزل</span>
+                      </label>
+                      <label className={`flex items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all ${formData.shippingType === 'desk' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-200 hover:border-emerald-200'}`}>
+                        <input type="radio" name="shippingType" value="desk" checked={formData.shippingType === 'desk'} onChange={(e) => setFormData({...formData, shippingType: e.target.value})} className="hidden" />
+                        <span className="font-medium text-sm">توصيل لمكتب الشحن</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div>
                     <label htmlFor="wilaya" className="block text-xs font-bold text-gray-700 mb-1">
                       الولاية
                     </label>
                     <select
                       id="wilaya"
                       required
-                      value={formData.wilaya}
-                      onChange={e => setFormData({ ...formData, wilaya: e.target.value })}
+                      value={formData.wilayaId}
+                      onChange={e => setFormData({ ...formData, wilayaId: e.target.value, baladiya: "" })}
                       className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 bg-gray-50 focus:bg-white outline-none transition-all"
                     >
-                      {wilayas.map((w, i) => (
-                        <option key={i} value={w}>{i + 1} - {w}</option>
+                      {wilayas.map((w) => (
+                        <option key={w.id} value={w.id.toString()}>{w.code} - {w.name_ar}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="baladiya" className="block text-xs font-bold text-gray-700 mb-1">
+                      البلدية
+                    </label>
+                    <select
+                      id="baladiya"
+                      required
+                      value={formData.baladiya}
+                      onChange={e => setFormData({ ...formData, baladiya: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 bg-gray-50 focus:bg-white outline-none transition-all"
+                    >
+                      <option value="">اختر البلدية</option>
+                      {getCommunesByWilayaId(parseInt(formData.wilayaId, 10)).map((c) => (
+                        <option key={c.id} value={c.name_ar}>{c.name_ar}</option>
                       ))}
                     </select>
                   </div>
 
                   <div>
                     <label htmlFor="address" className="block text-xs font-bold text-gray-700 mb-1">
-                      العنوان الكامل (البلدية، الحي)
+                      تفاصيل العنوان (الحي، الشارع)
                     </label>
                     <textarea
                       id="address"
                       required
-                      rows={3}
+                      rows={2}
                       value={formData.address}
                       onChange={e => setFormData({ ...formData, address: e.target.value })}
                       className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 bg-gray-50 focus:bg-white outline-none transition-all resize-none"
@@ -290,11 +338,21 @@ export default function ProductPage() {
                   </div>
 
                   <div className="pt-4 border-t border-gray-100">
-                    <div className="flex items-center justify-between mb-6">
-                      <span className="text-gray-600 font-medium">المجموع الإجمالي:</span>
-                      <span className="text-2xl font-bold text-emerald-600">
-                        {(product.price * quantity).toLocaleString('ar-DZ')} د.ج
-                      </span>
+                    <div className="flex flex-col gap-2 mb-6">
+                      <div className="flex items-center justify-between text-gray-600">
+                        <span>سعر المنتج ({quantity}x):</span>
+                        <span>{(product.price * quantity).toLocaleString('ar-DZ')} د.ج</span>
+                      </div>
+                      <div className="flex items-center justify-between text-gray-600">
+                        <span>تكلفة الشحن ({formData.shippingType === 'home' ? 'للمنزل' : 'للمكتب'}):</span>
+                        <span>{shippingCost.toLocaleString('ar-DZ')} د.ج</span>
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-100 mt-2">
+                        <span className="text-gray-900 font-bold">المجموع الإجمالي:</span>
+                        <span className="text-2xl font-bold text-emerald-600">
+                          {((product.price * quantity) + Number(shippingCost)).toLocaleString('ar-DZ')} د.ج
+                        </span>
+                      </div>
                     </div>
 
                     <button

@@ -2,15 +2,18 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { Order, Product } from "../types";
 import { useNavigate } from "react-router-dom";
-import { Package, ShoppingCart, LogOut, Plus, Trash2, Edit2, Loader2 } from "lucide-react";
+import { Package, ShoppingCart, LogOut, Plus, Trash2, Edit2, Loader2, Truck } from "lucide-react";
 import { cn } from "../lib/utils";
+import { getShippingRates, updateShippingRate, ShippingRate } from "../lib/shipping";
+import { wilayas } from "algeria-locations";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'orders' | 'products'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'shipping'>('orders');
   
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [shippingRates, setShippingRates] = useState<ShippingRate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,12 +22,14 @@ export default function AdminDashboard() {
   const [newProduct, setNewProduct] = useState({
     name: "", description: "", price: 0, imageUrl: "", stock: 100
   });
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const fetchData = async () => {
     try {
-      const [ordersRes, productsRes] = await Promise.all([
+      const [ordersRes, productsRes, ratesRes] = await Promise.all([
         supabase.from('orders').select('*').order('createdAt', { ascending: false }),
-        supabase.from('products').select('*').order('createdAt', { ascending: false })
+        supabase.from('products').select('*').order('createdAt', { ascending: false }),
+        getShippingRates()
       ]);
 
       if (ordersRes.error) throw ordersRes.error;
@@ -32,6 +37,7 @@ export default function AdminDashboard() {
 
       if (ordersRes.data) setOrders(ordersRes.data as Order[]);
       if (productsRes.data) setProducts(productsRes.data as Product[]);
+      setShippingRates(ratesRes);
     } catch (err: any) {
       console.error("Error fetching data:", JSON.stringify(err, null, 2));
       setError(err.message || "حدث خطأ أثناء جلب البيانات.");
@@ -75,6 +81,38 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploadingImage(true);
+      if (!e.target.files || e.target.files.length === 0) {
+        return;
+      }
+      const file = e.target.files[0];
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(filePath);
+
+      setNewProduct({...newProduct, imageUrl: publicUrlData.publicUrl});
+    } catch (error: any) {
+      alert("خطأ في رفع الصورة: " + error.message + "\nتأكد من إنشاء Storage Bucket باسم 'product-images' في إعدادات Supabase.");
+      console.error(error);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -87,6 +125,22 @@ export default function AdminDashboard() {
       fetchData();
     } catch (error) {
       console.error("Error adding product:", error);
+    }
+  };
+
+  const handleShippingUpdate = async (wilayaId: string, type: 'home' | 'desk', value: number) => {
+    try {
+      const rate = shippingRates.find(r => r.wilaya_id === wilayaId);
+      const home_price = type === 'home' ? value : (rate?.home_price || 800);
+      const desk_price = type === 'desk' ? value : (rate?.desk_price || 400);
+
+      await updateShippingRate(wilayaId, home_price, desk_price);
+      
+      setShippingRates(prev => prev.map(r => 
+        r.wilaya_id === wilayaId ? { ...r, home_price, desk_price } : r
+      ));
+    } catch (err: any) {
+      alert("خطأ في تحديث السعر: " + err.message + "\nتأكد من تحديث قاعدة البيانات كما هو موضح.");
     }
   };
 
@@ -170,6 +224,16 @@ export default function AdminDashboard() {
           >
             <Package className="w-5 h-5" />
             المنتجات
+          </button>
+          <button
+            onClick={() => setActiveTab('shipping')}
+            className={cn(
+              "flex-1 md:flex-none flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-right",
+              activeTab === 'shipping' ? "bg-emerald-50 text-emerald-700 font-medium" : "text-gray-600 hover:bg-gray-50"
+            )}
+          >
+            <Truck className="w-5 h-5" />
+            الشحن
           </button>
           
           <div className="hidden md:block mt-auto pt-4 border-t border-gray-100">
@@ -283,9 +347,16 @@ export default function AdminDashboard() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">الوصف</label>
                     <textarea required rows={3} value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 bg-gray-50 focus:bg-white transition-all"></textarea>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">رابط الصورة (URL)</label>
-                    <input type="url" value={newProduct.imageUrl} onChange={e => setNewProduct({...newProduct, imageUrl: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 bg-gray-50 focus:bg-white transition-all" dir="ltr" />
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">صورة المنتج</label>
+                    <div className="flex gap-4 items-center">
+                      <div className="flex-1 relative">
+                        <input type="file" accept="image/*" onChange={handleImageUpload} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" />
+                        {uploadingImage && <Loader2 className="w-5 h-5 animate-spin text-emerald-600 absolute left-4 top-1/2 -translate-y-1/2" />}
+                      </div>
+                      <div className="text-gray-400 text-sm">أو</div>
+                      <input type="url" placeholder="رابط صورة خارجي (URL)" value={newProduct.imageUrl} onChange={e => setNewProduct({...newProduct, imageUrl: e.target.value})} className="flex-1 px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 bg-gray-50 focus:bg-white transition-all" dir="ltr" />
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">المخزون المتوفر</label>
@@ -293,7 +364,7 @@ export default function AdminDashboard() {
                   </div>
                   <div className="md:col-span-2 flex justify-end gap-3 mt-2">
                     <button type="button" onClick={() => setShowAddProduct(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">إلغاء</button>
-                    <button type="submit" className="bg-emerald-600 text-white px-6 py-2 rounded-lg font-medium shadow-md shadow-emerald-200">حفظ المنتج</button>
+                    <button type="submit" disabled={uploadingImage} className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium shadow-md shadow-emerald-200 transition-colors">حفظ المنتج</button>
                   </div>
                 </form>
               </div>
@@ -332,6 +403,54 @@ export default function AdminDashboard() {
                   لا توجد منتجات حاليا
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'shipping' && (
+          <div className="space-y-6">
+            <h1 className="text-2xl font-bold text-gray-900">إعدادات الشحن</h1>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-x-auto p-4 md:p-6">
+              <div className="bg-yellow-50 text-yellow-800 p-4 rounded-xl mb-6 text-sm border border-yellow-200">
+                <strong>تنبيه:</strong> لحفظ الأسعار بشكل دائم، يرجى التأكد من تشغيل كود SQL لإنشاء جدول `shipping_rates` في إعدادات Supabase كما هو موضح في المحادثة.
+              </div>
+              <table className="w-full text-right">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200 text-gray-600 text-sm">
+                    <th className="p-4 font-medium">رقم</th>
+                    <th className="p-4 font-medium">الولاية</th>
+                    <th className="p-4 font-medium">توصيل للمنزل (د.ج)</th>
+                    <th className="p-4 font-medium">توصيل للمكتب (د.ج)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {wilayas.map(wilaya => {
+                    const rate = shippingRates.find(r => r.wilaya_id === wilaya.id.toString());
+                    return (
+                      <tr key={wilaya.id} className="hover:bg-gray-50/50">
+                        <td className="p-4 text-gray-500 font-medium">{wilaya.code}</td>
+                        <td className="p-4 font-bold text-gray-900">{wilaya.name_ar}</td>
+                        <td className="p-4">
+                          <input
+                            type="number"
+                            value={rate?.home_price || 800}
+                            onChange={(e) => handleShippingUpdate(wilaya.id.toString(), 'home', Number(e.target.value))}
+                            className="w-32 px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 bg-white"
+                          />
+                        </td>
+                        <td className="p-4">
+                          <input
+                            type="number"
+                            value={rate?.desk_price || 400}
+                            onChange={(e) => handleShippingUpdate(wilaya.id.toString(), 'desk', Number(e.target.value))}
+                            className="w-32 px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 bg-white"
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
