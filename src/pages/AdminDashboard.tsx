@@ -26,6 +26,12 @@ export default function AdminDashboard() {
   const [uploadingAdditional, setUploadingAdditional] = useState(false);
   const [additionalUrlInput, setAdditionalUrlInput] = useState("");
 
+  // Edit Product Form State
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editUploadingImage, setEditUploadingImage] = useState(false);
+  const [editUploadingAdditional, setEditUploadingAdditional] = useState(false);
+  const [editAdditionalUrlInput, setEditAdditionalUrlInput] = useState("");
+
   const fetchData = async () => {
     try {
       const [ordersRes, productsRes, ratesRes] = await Promise.all([
@@ -185,6 +191,125 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error("Error adding product:", error);
     }
+  };
+
+  const handleEditProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProduct) return;
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({
+          name: editingProduct.name,
+          price: editingProduct.price,
+          description: editingProduct.description,
+          imageUrl: editingProduct.imageUrl,
+          images: editingProduct.images,
+          stock: editingProduct.stock
+        })
+        .eq('id', editingProduct.id);
+      
+      if (error) throw error;
+      setEditingProduct(null);
+      fetchData();
+    } catch (error: any) {
+      console.error("Error editing product:", error);
+      alert("حدث خطأ أثناء تعديل المنتج: " + error.message);
+    }
+  };
+
+  const handleEditImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setEditUploadingImage(true);
+      if (!e.target.files || e.target.files.length === 0) {
+        return;
+      }
+      const file = e.target.files[0];
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(filePath);
+
+      if (editingProduct) {
+        setEditingProduct({ ...editingProduct, imageUrl: publicUrlData.publicUrl });
+      }
+    } catch (error: any) {
+      alert("خطأ في رفع الصورة: " + error.message + "\nتأكد من إنشاء Storage Bucket باسم 'product-images' في إعدادات Supabase.");
+      console.error(error);
+    } finally {
+      setEditUploadingImage(false);
+    }
+  };
+
+  const handleEditAdditionalImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setEditUploadingAdditional(true);
+      if (!e.target.files || e.target.files.length === 0) {
+        return;
+      }
+      const files: File[] = Array.from(e.target.files);
+      const uploadedUrls: string[] = [];
+
+      for (const file of files) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('product-images')
+          .upload(filePath, file);
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from('product-images')
+          .getPublicUrl(filePath);
+
+        uploadedUrls.push(publicUrlData.publicUrl);
+      }
+
+      if (editingProduct) {
+        setEditingProduct(prev => prev ? ({
+          ...prev,
+          images: [...(prev.images || []), ...uploadedUrls]
+        }) : null);
+      }
+    } catch (error: any) {
+      alert("خطأ في رفع الصور الإضافية: " + error.message + "\nتأكد من إنشاء Storage Bucket باسم 'product-images' في إعدادات Supabase.");
+      console.error(error);
+    } finally {
+      setEditUploadingAdditional(false);
+    }
+  };
+
+  const addEditAdditionalUrl = () => {
+    if (!editAdditionalUrlInput.trim() || !editingProduct) return;
+    setEditingProduct(prev => prev ? ({
+      ...prev,
+      images: [...(prev.images || []), editAdditionalUrlInput.trim()]
+    }) : null);
+    setEditAdditionalUrlInput("");
+  };
+
+  const removeEditAdditionalImage = (index: number) => {
+    if (!editingProduct) return;
+    setEditingProduct(prev => prev ? ({
+      ...prev,
+      images: (prev.images || []).filter((_, i) => i !== index)
+    }) : null);
   };
 
   const handleShippingUpdate = async (wilayaId: string, type: 'home' | 'desk', value: number) => {
@@ -460,6 +585,79 @@ export default function AdminDashboard() {
               </div>
             )}
 
+            {editingProduct && (
+              <div id="edit-product-section" className="bg-white p-6 rounded-2xl shadow-sm border border-blue-200">
+                <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Edit2 className="w-5 h-5 text-blue-600" />
+                  تعديل المنتج: {editingProduct.name}
+                </h2>
+                <form onSubmit={handleEditProduct} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">اسم المنتج</label>
+                    <input type="text" required value={editingProduct.name} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition-all" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">السعر (د.ج)</label>
+                    <input type="number" required min="0" value={editingProduct.price} onChange={e => setEditingProduct({...editingProduct, price: Number(e.target.value)})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition-all" />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">الوصف</label>
+                    <textarea required rows={3} value={editingProduct.description || ""} onChange={e => setEditingProduct({...editingProduct, description: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition-all"></textarea>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">صورة المنتج الرئيسية</label>
+                    <div className="flex gap-4 items-center">
+                      <div className="flex-1 relative">
+                        <input type="file" accept="image/*" onChange={handleEditImageUpload} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                        {editUploadingImage && <Loader2 className="w-5 h-5 animate-spin text-blue-600 absolute left-4 top-1/2 -translate-y-1/2" />}
+                      </div>
+                      <div className="text-gray-400 text-sm">أو</div>
+                      <input type="url" placeholder="رابط صورة خارجي (URL)" value={editingProduct.imageUrl || ""} onChange={e => setEditingProduct({...editingProduct, imageUrl: e.target.value})} className="flex-1 px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition-all" dir="ltr" />
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-2 border-t border-dashed border-gray-200 pt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">صور إضافية للمنتج (معرض الصور)</label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <div className="relative">
+                          <input type="file" accept="image/*" multiple onChange={handleEditAdditionalImageUpload} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                          {editUploadingAdditional && <Loader2 className="w-5 h-5 animate-spin text-blue-600 absolute left-4 top-1/2 -translate-y-1/2" />}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">يمكنك اختيار عدة صور دفعة واحدة.</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <input type="url" placeholder="أو أضف رابط صورة خارجي" value={editAdditionalUrlInput} onChange={e => setEditAdditionalUrlInput(e.target.value)} className="flex-1 px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition-all" dir="ltr" />
+                        <button type="button" onClick={addEditAdditionalUrl} className="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg text-sm font-medium">إضافة</button>
+                      </div>
+                    </div>
+
+                    {editingProduct.images && editingProduct.images.length > 0 && (
+                      <div className="flex flex-wrap gap-3 mt-4">
+                        {editingProduct.images.map((img, idx) => (
+                          <div key={idx} className="relative w-20 h-20 rounded-lg border border-gray-200 overflow-hidden group">
+                            <img src={img} alt="Additional preview" className="w-full h-full object-cover" />
+                            <button type="button" onClick={() => removeEditAdditionalImage(idx)} className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <span className="text-xs font-bold bg-red-600 px-2 py-1 rounded">حذف</span>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">المخزون المتوفر</label>
+                    <input type="number" required min="0" value={editingProduct.stock || 0} onChange={e => setEditingProduct({...editingProduct, stock: Number(e.target.value)})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition-all" />
+                  </div>
+                  <div className="md:col-span-2 flex justify-end gap-3 mt-2">
+                    <button type="button" onClick={() => setEditingProduct(null)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">إلغاء</button>
+                    <button type="submit" disabled={editUploadingImage || editUploadingAdditional} className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium shadow-md shadow-blue-200 transition-colors">حفظ التغييرات</button>
+                  </div>
+                </form>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {products.map(product => (
                 <div key={product.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-200 flex flex-col">
@@ -477,13 +675,35 @@ export default function AdminDashboard() {
                     
                     <div className="mt-auto flex items-center justify-between pt-4 border-t border-gray-100">
                       <span className="text-sm text-gray-600">المخزون: {product.stock}</span>
-                      <button 
-                        onClick={() => deleteProduct(product.id)}
-                        className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"
-                        title="حذف المنتج"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
+                      <div className="flex gap-1">
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            setEditingProduct(product);
+                            // Scroll up smoothly to see the editing form
+                            setTimeout(() => {
+                              const el = document.getElementById("edit-product-section");
+                              if (el) {
+                                el.scrollIntoView({ behavior: 'smooth' });
+                              } else {
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }
+                            }, 50);
+                          }}
+                          className="text-blue-500 hover:bg-blue-50 p-2 rounded-lg transition-colors"
+                          title="تعديل المنتج"
+                        >
+                          <Edit2 className="w-5 h-5" />
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => deleteProduct(product.id)}
+                          className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                          title="حذف المنتج"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
