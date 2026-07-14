@@ -1,20 +1,16 @@
-"use client";
-
 import React, { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabase";
-import { Order, Product } from "../../types";
-import { useRouter } from "next/navigation";
+import { supabase } from "../lib/supabase";
+import { Order, Product } from "../types";
+import { useNavigate } from "react-router-dom";
 import { Package, ShoppingCart, LogOut, Plus, Trash2, Edit2, Loader2, Truck } from "lucide-react";
-import { cn } from "../../lib/utils";
-import { getShippingRates, updateShippingRate, ShippingRate } from "../../lib/shipping";
+import { cn } from "../lib/utils";
+import { getShippingRates, updateShippingRate, ShippingRate } from "../lib/shipping";
 import { wilayas } from "algeria-locations";
 
-export default function AdminDashboardPage() {
-  const router = useRouter();
-  const [user, setUser] = useState<any>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-
+export default function AdminDashboard() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'shipping'>('orders');
+  
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [shippingRates, setShippingRates] = useState<ShippingRate[]>([]);
@@ -52,35 +48,8 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // Auth checking
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session || session.user?.email !== 'abdouarbouz56@gmail.com') {
-        router.push("/admin/login");
-      } else {
-        setUser(session.user);
-        setAuthLoading(false);
-        fetchData();
-      }
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session || session.user?.email !== 'abdouarbouz56@gmail.com') {
-        router.push("/admin/login");
-      } else {
-        setUser(session.user);
-        setAuthLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [router]);
-
-  // Real-time subscriptions
-  useEffect(() => {
-    if (authLoading || !user) return;
+    fetchData();
 
     const ordersSub = supabase.channel('orders_channel')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, payload => {
@@ -98,11 +67,11 @@ export default function AdminDashboardPage() {
       supabase.removeChannel(ordersSub);
       supabase.removeChannel(productsSub);
     };
-  }, [authLoading, user]);
+  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push("/admin/login");
+    navigate("/admin/login");
   };
 
   const updateOrderStatus = async (orderId: string, status: Order['status']) => {
@@ -245,7 +214,7 @@ export default function AdminDashboardPage() {
     }
   };
 
-  if (authLoading || loading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
@@ -284,7 +253,7 @@ export default function AdminDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row" dir="rtl">
+    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
       
       {/* Sidebar */}
       <aside className="w-full md:w-64 bg-white border-b md:border-l md:border-b-0 border-gray-200 p-4 md:min-h-screen shrink-0">
@@ -293,12 +262,12 @@ export default function AdminDashboardPage() {
           <button
             onClick={() => setActiveTab('orders')}
             className={cn(
-              "flex-1 md:flex-none flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-right w-full",
+              "flex-1 md:flex-none flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-right",
               activeTab === 'orders' ? "bg-emerald-50 text-emerald-700 font-medium" : "text-gray-600 hover:bg-gray-50"
             )}
           >
             <ShoppingCart className="w-5 h-5" />
-            <span>الطلبات</span>
+            الطلبات
             {orders.filter(o => o.status === 'pending').length > 0 && (
               <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full mr-auto">
                 {orders.filter(o => o.status === 'pending').length}
@@ -308,22 +277,22 @@ export default function AdminDashboardPage() {
           <button
             onClick={() => setActiveTab('products')}
             className={cn(
-              "flex-1 md:flex-none flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-right w-full",
+              "flex-1 md:flex-none flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-right",
               activeTab === 'products' ? "bg-emerald-50 text-emerald-700 font-medium" : "text-gray-600 hover:bg-gray-50"
             )}
           >
             <Package className="w-5 h-5" />
-            <span>المنتجات</span>
+            المنتجات
           </button>
           <button
             onClick={() => setActiveTab('shipping')}
             className={cn(
-              "flex-1 md:flex-none flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-right w-full",
+              "flex-1 md:flex-none flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-right",
               activeTab === 'shipping' ? "bg-emerald-50 text-emerald-700 font-medium" : "text-gray-600 hover:bg-gray-50"
             )}
           >
             <Truck className="w-5 h-5" />
-            <span>الشحن</span>
+            الشحن
           </button>
           
           <div className="hidden md:block mt-auto pt-4 border-t border-gray-100">
@@ -332,7 +301,7 @@ export default function AdminDashboardPage() {
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-colors text-right"
             >
               <LogOut className="w-5 h-5" />
-              <span>تسجيل الخروج</span>
+              تسجيل الخروج
             </button>
           </div>
         </nav>
@@ -417,7 +386,7 @@ export default function AdminDashboardPage() {
                 className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl flex items-center justify-center gap-2 font-medium transition-colors"
               >
                 <Plus className="w-5 h-5" />
-                <span>إضافة منتج جديد</span>
+                إضافة منتج جديد
               </button>
             </div>
 
@@ -469,7 +438,7 @@ export default function AdminDashboardPage() {
                       <div className="flex flex-wrap gap-3 mt-4">
                         {newProduct.images.map((img, idx) => (
                           <div key={idx} className="relative w-20 h-20 rounded-lg border border-gray-200 overflow-hidden group">
-                            <img src={img} alt="Additional preview" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                            <img src={img} alt="Additional preview" className="w-full h-full object-cover" />
                             <button type="button" onClick={() => removeAdditionalImage(idx)} className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                               <span className="text-xs font-bold bg-red-600 px-2 py-1 rounded">حذف</span>
                             </button>
@@ -496,7 +465,7 @@ export default function AdminDashboardPage() {
                 <div key={product.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-200 flex flex-col">
                   <div className="aspect-video bg-gray-100 relative">
                     {product.imageUrl ? (
-                      <img src={product.imageUrl} alt={product.name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                      <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">لا توجد صورة</div>
                     )}

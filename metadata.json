@@ -1,6 +1,6 @@
 {
-  "name": "",
-  "description": "",
+  "name": "متجر تسوق إلكتروني",
+  "description": "متجر تسوق إلكتروني متكامل يحتوي على معرض منتجات، صفحة تفاصيل المنتج مع فورم لطلب سريع، لوحة تحكم الإدارة لإدارة المنتجات والطلبات وتحديث حالات الشحن والمخزون.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
