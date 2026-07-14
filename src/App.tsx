@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import ShopHome from "./pages/ShopHome";
 import ProductPage from "./pages/ProductPage";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -15,6 +15,20 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "./lib/supabase";
 import { User } from "@supabase/supabase-js";
 import { Loader2 } from "lucide-react";
+import { pushDataLayerEvent } from "./lib/tracking";
+
+// React Router لا يُعيد تحميل الصفحة (SPA)، لذا PageView التلقائي
+// في GTM يُطلق مرة واحدة فقط عند أول تحميل. هذا المكوّن يدفع
+// حدث page_view يدويًا لـ dataLayer عند كل تنقّل بين الصفحات.
+function RouteChangeTracker() {
+  const location = useLocation();
+
+  useEffect(() => {
+    pushDataLayerEvent("page_view", { page_path: location.pathname });
+  }, [location.pathname]);
+
+  return null;
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -53,6 +67,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <BrowserRouter>
+      <RouteChangeTracker />
       <div className="min-h-screen bg-gray-50 font-sans" dir="rtl">
         <Routes>
           {/* Public Storefront Layout */}

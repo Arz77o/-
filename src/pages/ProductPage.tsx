@@ -6,6 +6,7 @@ import { wilayas, getCommunesByWilayaId } from 'algeria-locations';
 import { ArrowRight, Loader2, CheckCircle2, ShieldCheck, Truck, RotateCcw, Eye, Sparkles, AlertCircle, ThumbsUp } from "lucide-react";
 import { cn } from "../lib/utils";
 import { getShippingRates, ShippingRate } from "../lib/shipping";
+import { trackViewContent, trackLead, getMetaCookies, generateEventId } from "../lib/tracking";
 
 export default function ProductPage() {
   const { id } = useParams<{ id: string }>();
@@ -43,6 +44,11 @@ export default function ProductPage() {
           const fetchedProduct = productRes.data as Product;
           setProduct(fetchedProduct);
           setActiveImage(fetchedProduct.imageUrl || "");
+          trackViewContent({
+            id: fetchedProduct.id,
+            name: fetchedProduct.name,
+            price: fetchedProduct.price,
+          });
         }
         setShippingRates(ratesRes);
       } catch (err: any) {
@@ -74,20 +80,47 @@ export default function ProductPage() {
       const selectedWilaya = wilayas.find(w => w.id.toString() === formData.wilayaId);
       const wilayaName = selectedWilaya ? selectedWilaya.name_ar : formData.wilayaId;
 
-      const { error } = await supabase.from('orders').insert([{
-        productId: product.id,
-        productName: product.name,
-        quantity,
-        customerName: formData.name,
-        customerPhone: formData.phone,
-        customerAddress: `طريقة التوصيل: ${formData.shippingType === 'home' ? 'للمنزل' : 'لمكتب الشحن'} | تكلفة الشحن: ${shippingCost} د.ج | البلدية: ${formData.baladiya} | تفاصيل العنوان: ${formData.address}`,
-        customerWilaya: wilayaName,
-        totalAmount,
-        status: "pending",
-        createdAt: new Date().toISOString()
-      }]);
+      const { fbp, fbc } = getMetaCookies();
+
+      // نولّد المعرّفات محليًا قبل الإرسال، بدل قراءتها من قاعدة
+      // البيانات بعد الإدراج — لأن سياسة RLS الحالية تسمح بالإدراج
+      // للجميع لكن لا تسمح بالقراءة إلا للمستخدمين المسجّلين، وأي
+      // محاولة .select() بعد insert() كانت ستفشل بصمت للزبون العادي.
+      const orderId = crypto.randomUUID();
+      const leadEventId = generateEventId();
+
+      const { error } = await supabase
+        .from('orders')
+        .insert([{
+          id: orderId,
+          productId: product.id,
+          productName: product.name,
+          quantity,
+          customerName: formData.name,
+          customerPhone: formData.phone,
+          customerAddress: `طريقة التوصيل: ${formData.shippingType === 'home' ? 'للمنزل' : 'لمكتب الشحن'} | تكلفة الشحن: ${shippingCost} د.ج | البلدية: ${formData.baladiya} | تفاصيل العنوان: ${formData.address}`,
+          customerWilaya: wilayaName,
+          totalAmount,
+          status: "pending",
+          createdAt: new Date().toISOString(),
+          lead_event_id: leadEventId,
+          // نحفظ بيانات المطابقة الآن، لأنها ستُفقد نهائيًا بعد إغلاق
+          // الزبون للمتصفح، ونحتاجها لاحقًا عند إرسال Purchase عند التسليم
+          fbp,
+          fbc,
+          client_user_agent: navigator.userAgent,
+        }]);
 
       if (error) throw error;
+
+      // نُطلق Lead بعد نجاح الحفظ الفعلي فقط، بنفس المعرّف الذي حُفظ
+      // مع الطلب — كتابة واحدة فقط، بلا حاجة لأي تحديث لاحق قد يُحجب.
+      trackLead({
+        eventId: leadEventId,
+        value: totalAmount,
+        phone: formData.phone,
+        name: formData.name,
+      });
 
       setSuccess(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });

@@ -2,7 +2,7 @@ export const STORE_CONFIG = {
   name: "متجري",
   description: "أفضل المنتجات بأفضل الأسعار مع التوصيل السريع إلى 58 ولاية والدفع عند الاستلام.",
   socials: {
-    facebook: "https://facebook.com/yourpage",
+    facebook: "https://www.facebook.com/profile.php?id=61591983147698#",
     instagram: "https://instagram.com/yourprofile",
     whatsapp: "https://wa.me/213774422923", // Replace with real phone number (e.g., https://wa.me/213XXXXXXXXX)
   },
