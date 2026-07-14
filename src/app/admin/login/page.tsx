@@ -1,6 +1,8 @@
+"use client";
+
 import React, { useState, useEffect } from "react";
-import { supabase } from "../lib/supabase";
-import { useNavigate } from "react-router-dom";
+import { supabase } from "../../../lib/supabase";
+import { useRouter } from "next/navigation";
 import { Loader2, Lock } from "lucide-react";
 
 export default function AdminLogin() {
@@ -8,7 +10,7 @@ export default function AdminLogin() {
   const [error, setError] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const navigate = useNavigate();
+  const router = useRouter();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session }, error }) => {
@@ -20,12 +22,12 @@ export default function AdminLogin() {
             setError("هذا الحساب ليس لديه صلاحيات الإدارة.");
           });
         } else {
-          navigate("/admin");
+          router.push("/admin");
         }
       }
       setLoading(false);
     });
-  }, [navigate]);
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +49,7 @@ export default function AdminLogin() {
         return;
       }
 
-      navigate("/admin");
+      router.push("/admin");
     } catch (err: any) {
       console.error(err);
       setError(err?.message || "حدث خطأ أثناء تسجيل الدخول.");
@@ -56,7 +58,7 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4" dir="rtl">
       <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 w-full max-w-md text-center">
         <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">
           <Lock className="w-8 h-8 text-emerald-600" />

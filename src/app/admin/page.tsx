@@ -1,16 +1,20 @@
+"use client";
+
 import React, { useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
-import { Order, Product } from "../types";
-import { useNavigate } from "react-router-dom";
+import { supabase } from "../../lib/supabase";
+import { Order, Product } from "../../types";
+import { useRouter } from "next/navigation";
 import { Package, ShoppingCart, LogOut, Plus, Trash2, Edit2, Loader2, Truck } from "lucide-react";
-import { cn } from "../lib/utils";
-import { getShippingRates, updateShippingRate, ShippingRate } from "../lib/shipping";
+import { cn } from "../../lib/utils";
+import { getShippingRates, updateShippingRate, ShippingRate } from "../../lib/shipping";
 import { wilayas } from "algeria-locations";
 
-export default function AdminDashboard() {
-  const navigate = useNavigate();
+export default function AdminDashboardPage() {
+  const router = useRouter();
+  const [user, setUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
   const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'shipping'>('orders');
-  
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [shippingRates, setShippingRates] = useState<ShippingRate[]>([]);
@@ -20,9 +24,11 @@ export default function AdminDashboard() {
   // New Product Form State
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [newProduct, setNewProduct] = useState({
-    name: "", description: "", price: 0, imageUrl: "", stock: 100
+    name: "", description: "", price: 0, imageUrl: "", images: [] as string[], stock: 100
   });
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingAdditional, setUploadingAdditional] = useState(false);
+  const [additionalUrlInput, setAdditionalUrlInput] = useState("");
 
   const fetchData = async () => {
     try {
@@ -46,8 +52,35 @@ export default function AdminDashboard() {
     }
   };
 
+  // Auth checking
   useEffect(() => {
-    fetchData();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session || session.user?.email !== 'abdouarbouz56@gmail.com') {
+        router.push("/admin/login");
+      } else {
+        setUser(session.user);
+        setAuthLoading(false);
+        fetchData();
+      }
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session || session.user?.email !== 'abdouarbouz56@gmail.com') {
+        router.push("/admin/login");
+      } else {
+        setUser(session.user);
+        setAuthLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [router]);
+
+  // Real-time subscriptions
+  useEffect(() => {
+    if (authLoading || !user) return;
 
     const ordersSub = supabase.channel('orders_channel')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, payload => {
@@ -65,11 +98,11 @@ export default function AdminDashboard() {
       supabase.removeChannel(ordersSub);
       supabase.removeChannel(productsSub);
     };
-  }, []);
+  }, [authLoading, user]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate("/admin/login");
+    router.push("/admin/login");
   };
 
   const updateOrderStatus = async (orderId: string, status: Order['status']) => {
@@ -113,6 +146,63 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleAdditionalImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploadingAdditional(true);
+      if (!e.target.files || e.target.files.length === 0) {
+        return;
+      }
+      const files: File[] = Array.from(e.target.files);
+      const uploadedUrls: string[] = [];
+
+      for (const file of files) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('product-images')
+          .upload(filePath, file);
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from('product-images')
+          .getPublicUrl(filePath);
+
+        uploadedUrls.push(publicUrlData.publicUrl);
+      }
+
+      setNewProduct(prev => ({
+        ...prev,
+        images: [...(prev.images || []), ...uploadedUrls]
+      }));
+    } catch (error: any) {
+      alert("خطأ في رفع الصور الإضافية: " + error.message + "\nتأكد من إنشاء Storage Bucket باسم 'product-images' في إعدادات Supabase.");
+      console.error(error);
+    } finally {
+      setUploadingAdditional(false);
+    }
+  };
+
+  const addAdditionalUrl = () => {
+    if (!additionalUrlInput.trim()) return;
+    setNewProduct(prev => ({
+      ...prev,
+      images: [...(prev.images || []), additionalUrlInput.trim()]
+    }));
+    setAdditionalUrlInput("");
+  };
+
+  const removeAdditionalImage = (index: number) => {
+    setNewProduct(prev => ({
+      ...prev,
+      images: (prev.images || []).filter((_, i) => i !== index)
+    }));
+  };
+
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -121,7 +211,7 @@ export default function AdminDashboard() {
         createdAt: new Date().toISOString()
       }]);
       setShowAddProduct(false);
-      setNewProduct({ name: "", description: "", price: 0, imageUrl: "", stock: 100 });
+      setNewProduct({ name: "", description: "", price: 0, imageUrl: "", images: [] as string[], stock: 100 });
       fetchData();
     } catch (error) {
       console.error("Error adding product:", error);
@@ -155,7 +245,7 @@ export default function AdminDashboard() {
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
@@ -194,7 +284,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row" dir="rtl">
       
       {/* Sidebar */}
       <aside className="w-full md:w-64 bg-white border-b md:border-l md:border-b-0 border-gray-200 p-4 md:min-h-screen shrink-0">
@@ -203,12 +293,12 @@ export default function AdminDashboard() {
           <button
             onClick={() => setActiveTab('orders')}
             className={cn(
-              "flex-1 md:flex-none flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-right",
+              "flex-1 md:flex-none flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-right w-full",
               activeTab === 'orders' ? "bg-emerald-50 text-emerald-700 font-medium" : "text-gray-600 hover:bg-gray-50"
             )}
           >
             <ShoppingCart className="w-5 h-5" />
-            الطلبات
+            <span>الطلبات</span>
             {orders.filter(o => o.status === 'pending').length > 0 && (
               <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full mr-auto">
                 {orders.filter(o => o.status === 'pending').length}
@@ -218,22 +308,22 @@ export default function AdminDashboard() {
           <button
             onClick={() => setActiveTab('products')}
             className={cn(
-              "flex-1 md:flex-none flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-right",
+              "flex-1 md:flex-none flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-right w-full",
               activeTab === 'products' ? "bg-emerald-50 text-emerald-700 font-medium" : "text-gray-600 hover:bg-gray-50"
             )}
           >
             <Package className="w-5 h-5" />
-            المنتجات
+            <span>المنتجات</span>
           </button>
           <button
             onClick={() => setActiveTab('shipping')}
             className={cn(
-              "flex-1 md:flex-none flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-right",
+              "flex-1 md:flex-none flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-right w-full",
               activeTab === 'shipping' ? "bg-emerald-50 text-emerald-700 font-medium" : "text-gray-600 hover:bg-gray-50"
             )}
           >
             <Truck className="w-5 h-5" />
-            الشحن
+            <span>الشحن</span>
           </button>
           
           <div className="hidden md:block mt-auto pt-4 border-t border-gray-100">
@@ -242,7 +332,7 @@ export default function AdminDashboard() {
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-colors text-right"
             >
               <LogOut className="w-5 h-5" />
-              تسجيل الخروج
+              <span>تسجيل الخروج</span>
             </button>
           </div>
         </nav>
@@ -327,7 +417,7 @@ export default function AdminDashboard() {
                 className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl flex items-center justify-center gap-2 font-medium transition-colors"
               >
                 <Plus className="w-5 h-5" />
-                إضافة منتج جديد
+                <span>إضافة منتج جديد</span>
               </button>
             </div>
 
@@ -348,7 +438,7 @@ export default function AdminDashboard() {
                     <textarea required rows={3} value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 bg-gray-50 focus:bg-white transition-all"></textarea>
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">صورة المنتج</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">صورة المنتج الرئيسية</label>
                     <div className="flex gap-4 items-center">
                       <div className="flex-1 relative">
                         <input type="file" accept="image/*" onChange={handleImageUpload} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" />
@@ -358,13 +448,44 @@ export default function AdminDashboard() {
                       <input type="url" placeholder="رابط صورة خارجي (URL)" value={newProduct.imageUrl} onChange={e => setNewProduct({...newProduct, imageUrl: e.target.value})} className="flex-1 px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 bg-gray-50 focus:bg-white transition-all" dir="ltr" />
                     </div>
                   </div>
+
+                  <div className="md:col-span-2 border-t border-dashed border-gray-200 pt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">صور إضافية للمنتج (معرض الصور)</label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <div className="relative">
+                          <input type="file" accept="image/*" multiple onChange={handleAdditionalImageUpload} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" />
+                          {uploadingAdditional && <Loader2 className="w-5 h-5 animate-spin text-emerald-600 absolute left-4 top-1/2 -translate-y-1/2" />}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">يمكنك اختيار عدة صور دفعة واحدة.</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <input type="url" placeholder="أو أضف رابط صورة خارجي" value={additionalUrlInput} onChange={e => setAdditionalUrlInput(e.target.value)} className="flex-1 px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 bg-gray-50 focus:bg-white transition-all" dir="ltr" />
+                        <button type="button" onClick={addAdditionalUrl} className="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg text-sm font-medium">إضافة</button>
+                      </div>
+                    </div>
+
+                    {newProduct.images && newProduct.images.length > 0 && (
+                      <div className="flex flex-wrap gap-3 mt-4">
+                        {newProduct.images.map((img, idx) => (
+                          <div key={idx} className="relative w-20 h-20 rounded-lg border border-gray-200 overflow-hidden group">
+                            <img src={img} alt="Additional preview" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                            <button type="button" onClick={() => removeAdditionalImage(idx)} className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <span className="text-xs font-bold bg-red-600 px-2 py-1 rounded">حذف</span>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">المخزون المتوفر</label>
                     <input type="number" required min="0" value={newProduct.stock} onChange={e => setNewProduct({...newProduct, stock: Number(e.target.value)})} className="w-full px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 bg-gray-50 focus:bg-white transition-all" />
                   </div>
                   <div className="md:col-span-2 flex justify-end gap-3 mt-2">
                     <button type="button" onClick={() => setShowAddProduct(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">إلغاء</button>
-                    <button type="submit" disabled={uploadingImage} className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium shadow-md shadow-emerald-200 transition-colors">حفظ المنتج</button>
+                    <button type="submit" disabled={uploadingImage || uploadingAdditional} className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium shadow-md shadow-emerald-200 transition-colors">حفظ المنتج</button>
                   </div>
                 </form>
               </div>
@@ -375,7 +496,7 @@ export default function AdminDashboard() {
                 <div key={product.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-200 flex flex-col">
                   <div className="aspect-video bg-gray-100 relative">
                     {product.imageUrl ? (
-                      <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+                      <img src={product.imageUrl} alt={product.name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">لا توجد صورة</div>
                     )}

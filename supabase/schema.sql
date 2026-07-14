@@ -5,6 +5,7 @@ CREATE TABLE products (
   description TEXT NOT NULL,
   price NUMERIC NOT NULL,
   "imageUrl" TEXT,
+  images TEXT[] DEFAULT '{}',
   stock INTEGER NOT NULL DEFAULT 0,
   "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

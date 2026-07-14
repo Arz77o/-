@@ -1,7 +1,9 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { Product } from "../types";
-import { Link } from "react-router-dom";
+import Link from "next/link";
 import { Loader2, ShoppingBag } from "lucide-react";
 
 export default function ShopHome() {
@@ -63,7 +65,7 @@ export default function ShopHome() {
             {products.map((product) => (
               <Link 
                 key={product.id} 
-                to={`/product/${product.id}`}
+                href={`/product/${product.id}`}
                 className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col"
               >
                 <div className="aspect-[4/5] bg-gray-100 relative overflow-hidden">
@@ -71,6 +73,7 @@ export default function ShopHome() {
                     <img 
                       src={product.imageUrl} 
                       alt={product.name} 
+                      referrerPolicy="no-referrer"
                       className="w-full h-full object-cover"
                     />
                   ) : (

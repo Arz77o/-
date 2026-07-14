@@ -1,17 +1,21 @@
+"use client";
+
 import React, { useEffect, useState, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { supabase } from "../lib/supabase";
-import { Product } from "../types";
+import { useParams, useRouter } from "next/navigation";
+import { supabase } from "../../../lib/supabase";
+import { Product } from "../../../types";
 import { wilayas, getCommunesByWilayaId } from 'algeria-locations';
 import { ArrowRight, Loader2, CheckCircle2, ShieldCheck, Truck } from "lucide-react";
-import { cn } from "../lib/utils";
-import { getShippingRates, ShippingRate } from "../lib/shipping";
+import { cn } from "../../../lib/utils";
+import { getShippingRates, ShippingRate } from "../../../lib/shipping";
 
 export default function ProductPage() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const params = useParams();
+  const id = params?.id as string;
+  const router = useRouter();
   
   const [product, setProduct] = useState<Product | null>(null);
+  const [activeImage, setActiveImage] = useState<string>("");
   const [shippingRates, setShippingRates] = useState<ShippingRate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +43,9 @@ export default function ProductPage() {
 
         if (productRes.error) throw productRes.error;
         if (productRes.data) {
-          setProduct(productRes.data as Product);
+          const fetchedProduct = productRes.data as Product;
+          setProduct(fetchedProduct);
+          setActiveImage(fetchedProduct.imageUrl || "");
         }
         setShippingRates(ratesRes);
       } catch (err: any) {
@@ -110,7 +116,7 @@ export default function ProductPage() {
         <div className="bg-red-50 text-red-600 p-6 rounded-xl border border-red-200 max-w-md w-full text-center">
           <h2 className="text-xl font-bold mb-2">خطأ في جلب المنتج</h2>
           <p className="text-sm mb-4" dir="ltr">{error}</p>
-          <button onClick={() => navigate('/')} className="text-emerald-600 hover:underline font-bold">
+          <button onClick={() => router.push('/')} className="text-emerald-600 hover:underline font-bold">
             العودة للرئيسية
           </button>
         </div>
@@ -122,7 +128,7 @@ export default function ProductPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
         <h2 className="text-xl font-bold mb-4">المنتج غير موجود</h2>
-        <button onClick={() => navigate('/')} className="text-emerald-600 hover:underline">
+        <button onClick={() => router.push('/')} className="text-emerald-600 hover:underline">
           العودة للرئيسية
         </button>
       </div>
@@ -130,11 +136,11 @@ export default function ProductPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 md:pb-12">
+    <div className="min-h-screen bg-gray-50 pb-20 md:pb-12" dir="rtl">
       <header className="bg-white border-b sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center gap-4">
           <button 
-            onClick={() => navigate('/')}
+            onClick={() => router.push('/')}
             className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
           >
             <ArrowRight className="w-5 h-5 text-gray-700" />
@@ -154,7 +160,7 @@ export default function ProductPage() {
               سنتصل بك قريباً على الرقم <span className="font-bold text-gray-900" dir="ltr">{formData.phone}</span> لتأكيد الطلب.
             </p>
             <button 
-              onClick={() => navigate('/')}
+              onClick={() => router.push('/')}
               className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-emerald-200 transition-colors"
             >
               العودة للتسوق
@@ -166,10 +172,11 @@ export default function ProductPage() {
             {/* Product Details */}
             <div className="w-full md:w-1/2 bg-white md:rounded-3xl overflow-hidden border-b md:border border-gray-100 shadow-sm md:sticky md:top-24">
               <div className="aspect-square bg-gray-100 relative">
-                {product.imageUrl ? (
+                {activeImage ? (
                   <img 
-                    src={product.imageUrl} 
+                    src={activeImage} 
                     alt={product.name} 
+                    referrerPolicy="no-referrer"
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -178,6 +185,25 @@ export default function ProductPage() {
                   </div>
                 )}
               </div>
+
+              {/* Thumbnails gallery */}
+              {product.imageUrl && [product.imageUrl, ...(product.images || [])].filter(Boolean).length > 1 && (
+                <div className="flex gap-2 px-5 py-4 overflow-x-auto bg-gray-50/50 border-t border-b border-gray-100" dir="rtl">
+                  {[product.imageUrl, ...(product.images || [])].filter(Boolean).map((img, idx) => (
+                    <button 
+                      key={idx}
+                      type="button"
+                      onClick={() => setActiveImage(img)}
+                      className={cn(
+                        "w-16 h-16 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 bg-white",
+                        activeImage === img ? "border-emerald-600 scale-95 shadow-sm" : "border-gray-100 hover:border-gray-300"
+                      )}
+                    >
+                      <img src={img} alt="Product Thumbnail" className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
               
               <div className="p-5 md:p-8">
                 <h1 className="text-2xl font-bold text-gray-900 mb-2 leading-tight">
