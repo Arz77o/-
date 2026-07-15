@@ -1,13 +1,11 @@
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
-import node from '@astrojs/node';
+import cloudflare from '@astrojs/cloudflare'; //[cite: 3]
 
 export default defineConfig({
-  output: 'server',
-  adapter: node({
-    mode: 'standalone',
-  }),
+  output: 'server', // Keeps Server-Side Rendering (SSR) enabled
+  adapter: cloudflare(), // Switched from node()[cite: 3]
   integrations: [react()],
   vite: {
     plugins: [tailwindcss()],
@@ -16,9 +14,5 @@ export default defineConfig({
         '@': '/src',
       },
     },
-  },
-  server: {
-    port: 3000,
-    host: '0.0.0.0',
   },
 });

@@ -11,6 +11,7 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@astrojs/cloudflare": "^12.6.13",
     "@astrojs/node": "^9.5.5",
     "@astrojs/react": "^4.2.7",
     "@supabase/supabase-js": "^2.110.3",
