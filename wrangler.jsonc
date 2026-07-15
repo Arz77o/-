@@ -1,0 +1,8 @@
+{
+  "name": "matjari-store",
+  "compatibility_date": "2026-07-15",
+  "main": "./dist/_worker.js",
+  "assets": {
+    "directory": "./dist"
+  }
+}
