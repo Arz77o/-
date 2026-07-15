@@ -2,12 +2,10 @@
 // 1. Tell Cloudflare to cache this server-rendered page for 10 minutes
 Astro.response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=600');
 
-// ... your existing imports and Supabase fetch code ...
----
-
----
+// 2. Imports
 import BaseLayout from '../layouts/BaseLayout.astro';
 import ShopHome from '../components/ShopHome.tsx';
+
 const currentPath = '/';
 ---
 
