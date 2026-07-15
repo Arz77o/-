@@ -4,11 +4,11 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=600');
 
 // 2. Imports
 import BaseLayout from '../layouts/BaseLayout.astro';
-import ShopHome from '../components/ShopHome.tsx';
+import ShopHome from '../components/ShopHome.astro';
 
 const currentPath = '/';
 ---
 
 <BaseLayout title="Matjari-متجري - تسوق آمن وسهل" currentPath={currentPath}>
-  <ShopHome client:load />
+  <ShopHome />
 </BaseLayout>

@@ -1,18 +1,56 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import ProductPage from '../../components/ProductPage.tsx';
+import { supabase } from '../../lib/supabase';
+import { getShippingRates } from '../../lib/shipping';
+import type { Product } from '../../types';
 
 const { id } = Astro.params;
 const currentPath = `/product/${id}`;
+
+let product: Product | null = null;
+let shippingRates: any[] = [];
+let fetchError: string | null = null;
+
+if (id) {
+  try {
+    const [productRes, ratesRes] = await Promise.all([
+      supabase.from('products').select('*').eq('id', id).single(),
+      getShippingRates()
+    ]);
+
+    if (productRes.error) throw productRes.error;
+    if (productRes.data) {
+      product = productRes.data as Product;
+    }
+    shippingRates = ratesRes;
+  } catch (err: any) {
+    console.error("Error fetching data:", err);
+    fetchError = err.message || "حدث خطأ أثناء جلب المنتج.";
+  }
+}
 ---
 
-<BaseLayout title="تفاصيل المنتج - Matjari-متجري" currentPath={currentPath}>
+<BaseLayout title={product ? `${product.name} - Matjari-متجري` : "تفاصيل المنتج - Matjari-متجري"} currentPath={currentPath}>
   {
-    id ? (
-      <ProductPage client:load id={id} />
+    fetchError ? (
+      <div class="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
+        <div class="bg-red-50 text-red-600 p-6 rounded-xl border border-red-200 max-w-md w-full text-center">
+          <h2 class="text-xl font-bold mb-2">خطأ في جلب المنتج</h2>
+          <p class="text-sm mb-4" dir="ltr">{fetchError}</p>
+          <a href="/" class="text-emerald-600 hover:underline font-bold inline-block">
+            العودة للرئيسية
+          </a>
+        </div>
+      </div>
+    ) : product ? (
+      <ProductPage client:load initialProduct={product} initialShippingRates={shippingRates} />
     ) : (
-      <div class="min-h-screen flex items-center justify-center bg-gray-50">
-        <p class="text-gray-500">معرف المنتج غير موجود</p>
+      <div class="min-h-screen flex flex-col items-center justify-center bg-gray-50">
+        <h2 class="text-xl font-bold mb-4">المنتج غير موجود</h2>
+        <a href="/" class="text-emerald-600 hover:underline">
+          العودة للرئيسية
+        </a>
       </div>
     )
   }

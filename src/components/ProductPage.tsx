@@ -12,14 +12,15 @@ import type { ShippingRate } from "../lib/shipping";
 import { trackViewContent, trackLead, getMetaCookies, generateEventId } from "../lib/tracking";
 
 interface ProductPageProps {
-  id: string;
+  initialProduct: Product;
+  initialShippingRates: ShippingRate[];
 }
 
-export default function ProductPage({ id }: ProductPageProps) {
-  const [product, setProduct] = useState<Product | null>(null);
-  const [activeImage, setActiveImage] = useState<string>("");
-  const [shippingRates, setShippingRates] = useState<ShippingRate[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function ProductPage({ initialProduct, initialShippingRates }: ProductPageProps) {
+  const [product, setProduct] = useState<Product | null>(initialProduct);
+  const [activeImage, setActiveImage] = useState<string>(initialProduct?.imageUrl || "");
+  const [shippingRates, setShippingRates] = useState<ShippingRate[]>(initialShippingRates);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -37,36 +38,14 @@ export default function ProductPage({ id }: ProductPageProps) {
   });
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!id) return;
-      try {
-        const [productRes, ratesRes] = await Promise.all([
-          supabase.from('products').select('*').eq('id', id).single(),
-          getShippingRates()
-        ]);
-
-        if (productRes.error) throw productRes.error;
-        if (productRes.data) {
-          const fetchedProduct = productRes.data as Product;
-          setProduct(fetchedProduct);
-          setActiveImage(fetchedProduct.imageUrl || "");
-          trackViewContent({
-            id: fetchedProduct.id,
-            name: fetchedProduct.name,
-            price: fetchedProduct.price,
-          });
-        }
-        setShippingRates(ratesRes);
-      } catch (err: any) {
-        console.error("Error fetching data:", JSON.stringify(err, null, 2));
-        setError(err.message || "حدث خطأ أثناء جلب المنتج.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [id]);
+    if (initialProduct) {
+      trackViewContent({
+        id: initialProduct.id,
+        name: initialProduct.name,
+        price: initialProduct.price,
+      });
+    }
+  }, [initialProduct]);
 
   const shippingCost = useMemo(() => {
     const rate = shippingRates.find(r => r.wilaya_id === formData.wilayaId);
