@@ -24,9 +24,11 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-function escapeMarkdown(text: string): string {
-  // يفلتر الأحرف الخاصة في MarkdownV2 لتجنب أخطاء التنسيق
-  return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, "\\$&");
+function escapeHtml(text: string | number): string {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 serve(async (req) => {
@@ -88,18 +90,18 @@ serve(async (req) => {
 
     // بناء رسالة تيليغرام
     const message = [
-      "🆕 *طلب جديد*\n",
-      `👤 *الاسم:* ${escapeMarkdown(customerName)}`,
-      `📞 *الهاتف:* ${escapeMarkdown(customerPhone)}`,
-      `📍 *الولاية:* ${escapeMarkdown(customerWilaya || "غير محدد")}`,
-      `📦 *المنتج:* ${escapeMarkdown(productName)}`,
-      `🔢 *الكمية:* ${quantity || 1}`,
-      selectedSize ? `📏 *المقاس:* ${escapeMarkdown(selectedSize)}` : "",
-      selectedColor ? `🎨 *اللون:* ${escapeMarkdown(selectedColor)}` : "",
-      `💰 *المبلغ:* ${Number(totalAmount || 0).toLocaleString("ar-DZ")} د\\.ج`,
-      address ? `🏠 *العنوان:* ${escapeMarkdown(address)}` : "",
-      `\n🕐 *التاريخ:* ${escapeMarkdown(orderDate)}`,
-      `🆔 *رقم الطلب:* \`${escapeMarkdown(orderId)}\``,
+      "🆕 <b>طلب جديد</b>\n",
+      `👤 <b>الاسم:</b> ${escapeHtml(customerName)}`,
+      `📞 <b>الهاتف:</b> ${escapeHtml(customerPhone)}`,
+      `📍 <b>الولاية:</b> ${escapeHtml(customerWilaya || "غير محدد")}`,
+      `📦 <b>المنتج:</b> ${escapeHtml(productName)}`,
+      `🔢 <b>الكمية:</b> ${escapeHtml(quantity || 1)}`,
+      selectedSize ? `📏 <b>المقاس:</b> ${escapeHtml(selectedSize)}` : "",
+      selectedColor ? `🎨 <b>اللون:</b> ${escapeHtml(selectedColor)}` : "",
+      `💰 <b>المبلغ:</b> ${Number(totalAmount || 0).toLocaleString("ar-DZ")} د.ج`,
+      address ? `🏠 <b>العنوان:</b> ${escapeHtml(address)}` : "",
+      `\n🕐 <b>التاريخ:</b> ${escapeHtml(orderDate)}`,
+      `🆔 <b>رقم الطلب:</b> <code>${escapeHtml(orderId)}</code>`,
     ]
       .filter(Boolean)
       .join("\n");
@@ -113,7 +115,7 @@ serve(async (req) => {
         body: JSON.stringify({
           chat_id: CHAT_ID,
           text: message,
-          parse_mode: "MarkdownV2",
+          parse_mode: "HTML",
           disable_web_page_preview: true,
         }),
       },
