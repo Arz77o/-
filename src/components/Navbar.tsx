@@ -1,11 +1,30 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { ShoppingBag, Facebook, Instagram, MessageCircle, Menu, X } from "lucide-react";
+import { HiOutlineShoppingBag, HiMenu, HiX } from "react-icons/hi";
+import { FaFacebook, FaInstagram, FaWhatsapp } from "react-icons/fa";
 import { STORE_CONFIG } from "../lib/config";
 
-export default function Navbar() {
+interface NavbarProps {
+  currentPath?: string;
+}
+
+export default function Navbar({ currentPath = "/" }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const location = useLocation();
+  const [currentHash, setCurrentHash] = useState("");
+
+  useEffect(() => {
+    setCurrentHash(window.location.hash);
+  }, []);
+
+  useEffect(() => {
+    const handleHashChange = () => setCurrentHash(window.location.hash);
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
 
   const navLinks = [
     { name: "الرئيسية", path: "/" },
@@ -13,19 +32,19 @@ export default function Navbar() {
   ];
 
   useEffect(() => {
-    if (location.hash === "#products") {
+    if (currentHash === "#products") {
       const element = document.getElementById("products-section");
       if (element) {
         element.scrollIntoView({ behavior: "smooth" });
       }
     }
-  }, [location]);
+  }, [currentHash]);
 
   const isLinkActive = (path: string) => {
     if (path.includes("#products")) {
-      return location.pathname === "/" && location.hash === "#products";
+      return currentPath === "/" && currentHash === "#products";
     }
-    return location.pathname === "/" && location.hash === "";
+    return currentPath === "/" && currentHash === "";
   };
 
   const activeClass = (path: string) => 
@@ -39,23 +58,23 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-16">
           
           {/* Logo / Brand Name */}
-          <Link to="/" className="flex items-center gap-2 font-bold text-xl text-gray-900 group">
+          <a href="/" className="flex items-center gap-2 font-bold text-xl text-gray-900 group">
             <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 transition-transform group-hover:scale-105">
-              <ShoppingBag className="w-5 h-5" />
+              <HiOutlineShoppingBag className="w-5 h-5" />
             </div>
             <span className="tracking-tight hover:text-emerald-600 transition-colors">{STORE_CONFIG.name}</span>
-          </Link>
+          </a>
 
           {/* Desktop Navigation Links */}
           <div className="hidden md:flex items-center gap-8">
             {navLinks.map((link) => (
-              <Link 
+              <a 
                 key={link.path} 
-                to={link.path} 
+                href={link.path} 
                 className={`py-5 px-1 transition-all text-sm ${activeClass(link.path)}`}
               >
                 {link.name}
-              </Link>
+              </a>
             ))}
           </div>
 
@@ -68,7 +87,7 @@ export default function Navbar() {
               className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center text-gray-500 hover:bg-blue-50 hover:text-blue-600 transition-all"
               title="فيسبوك"
             >
-              <Facebook className="w-4 h-4" />
+              <FaFacebook className="w-4 h-4" />
             </a>
             <a 
               href={STORE_CONFIG.socials.instagram} 
@@ -77,7 +96,7 @@ export default function Navbar() {
               className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center text-gray-500 hover:bg-pink-50 hover:text-pink-600 transition-all"
               title="إنستغرام"
             >
-              <Instagram className="w-4 h-4" />
+              <FaInstagram className="w-4 h-4" />
             </a>
             <a 
               href={STORE_CONFIG.socials.whatsapp} 
@@ -86,7 +105,7 @@ export default function Navbar() {
               className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 hover:bg-emerald-100 hover:scale-105 transition-all"
               title="واتساب"
             >
-              <MessageCircle className="w-4 h-4 fill-current" />
+              <FaWhatsapp className="w-4 h-4" />
             </a>
           </div>
 
@@ -99,14 +118,14 @@ export default function Navbar() {
               rel="noopener noreferrer" 
               className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 hover:bg-emerald-100 transition-colors"
             >
-              <MessageCircle className="w-4 h-4 fill-current" />
+              <FaWhatsapp className="w-4 h-4" />
             </a>
             <button
               onClick={() => setIsOpen(!isOpen)}
               className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-600 transition-colors"
               aria-label="Toggle menu"
             >
-              {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {isOpen ? <HiX className="w-6 h-6" /> : <HiMenu className="w-6 h-6" />}
             </button>
           </div>
 
@@ -118,9 +137,9 @@ export default function Navbar() {
         <div className="md:hidden border-t border-gray-100 bg-white animate-fade-in">
           <div className="px-4 py-3 space-y-1">
             {navLinks.map((link) => (
-              <Link
+              <a
                 key={link.path}
-                to={link.path}
+                href={link.path}
                 onClick={() => setIsOpen(false)}
                 className={`block py-3 px-4 rounded-xl transition-all text-base ${
                   isLinkActive(link.path)
@@ -129,7 +148,7 @@ export default function Navbar() {
                 }`}
               >
                 {link.name}
-              </Link>
+              </a>
             ))}
 
             {/* Social Media Row in Mobile Menu */}
@@ -140,7 +159,7 @@ export default function Navbar() {
                 rel="noopener noreferrer" 
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-50 text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition-all text-sm font-medium w-[30%]"
               >
-                <Facebook className="w-4 h-4" />
+                <FaFacebook className="w-4 h-4" />
                 <span>فيسبوك</span>
               </a>
               <a 
@@ -149,7 +168,7 @@ export default function Navbar() {
                 rel="noopener noreferrer" 
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-50 text-gray-600 hover:bg-pink-50 hover:text-pink-600 transition-all text-sm font-medium w-[30%]"
               >
-                <Instagram className="w-4 h-4" />
+                <FaInstagram className="w-4 h-4" />
                 <span>إنستغرام</span>
               </a>
               <a 
@@ -158,7 +177,7 @@ export default function Navbar() {
                 rel="noopener noreferrer" 
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-all text-sm font-bold w-[30%]"
               >
-                <MessageCircle className="w-4 h-4 fill-current text-emerald-600" />
+                <FaWhatsapp className="w-4 h-4" />
                 <span>واتساب</span>
               </a>
             </div>

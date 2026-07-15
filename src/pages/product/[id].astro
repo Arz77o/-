@@ -1,0 +1,22 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ProductPage from '../../components/ProductPage.tsx';
+export async function getStaticPaths() {
+  // Dynamic route - no static paths needed
+  return [];
+}
+const { id } = Astro.params;
+const currentPath = `/product/${id}`;
+---
+
+<BaseLayout title="تفاصيل المنتج - Matjari-متجري" currentPath={currentPath}>
+  {
+    id ? (
+      <ProductPage client:load id={id} />
+    ) : (
+      <div class="min-h-screen flex items-center justify-center bg-gray-50">
+        <p class="text-gray-500">معرف المنتج غير موجود</p>
+      </div>
+    )
+  }
+</BaseLayout>

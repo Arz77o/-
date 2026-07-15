@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { Product } from "../types";
-import { Link } from "react-router-dom";
-import { Loader2, ShoppingBag } from "lucide-react";
+import type { Product } from "../types";
+import { HiOutlineShoppingBag } from "react-icons/hi";
+import { FiLoader } from "react-icons/fi";
 
 export default function ShopHome() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -43,7 +43,7 @@ export default function ShopHome() {
           </div>
         ) : loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+            <FiLoader className="w-8 h-8 animate-spin text-gray-400" />
           </div>
         ) : products.length === 0 ? (
           <div className="text-center py-20 text-gray-500">
@@ -54,9 +54,9 @@ export default function ShopHome() {
             {products.map((product) => {
               const originalPrice = Math.round((product.price * 1.35) / 100) * 100;
               return (
-                <Link 
+                <a 
                   key={product.id} 
-                  to={`/product/${product.id}`}
+                  href={`/product/${product.id}`}
                   className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 flex flex-col relative group"
                 >
                   {/* Floating Discount Badge */}
@@ -90,7 +90,7 @@ export default function ShopHome() {
                       </div>
                     </div>
                   </div>
-                </Link>
+                </a>
               );
             })}
           </div>

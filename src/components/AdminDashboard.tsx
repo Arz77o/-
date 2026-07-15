@@ -1,14 +1,18 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { Order, Product } from "../types";
-import { useNavigate } from "react-router-dom";
-import { Package, ShoppingCart, LogOut, Plus, Trash2, Edit2, Loader2, Truck } from "lucide-react";
+import type { Order, Product } from "../types";
+import { FiPackage, FiShoppingCart, FiLogOut, FiPlus, FiTrash2, FiEdit2, FiLoader } from "react-icons/fi";
+import { HiOutlineTruck } from "react-icons/hi";
 import { cn } from "../lib/utils";
-import { getShippingRates, updateShippingRate, ShippingRate } from "../lib/shipping";
+import { getShippingRates, updateShippingRate } from "../lib/shipping";
+import type { ShippingRate } from "../lib/shipping";
 import { wilayas } from "algeria-locations";
 
-export default function AdminDashboard() {
-  const navigate = useNavigate();
+interface AdminDashboardProps {
+  onLogout?: () => void;
+}
+
+export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'shipping'>('orders');
   
   const [orders, setOrders] = useState<Order[]>([]);
@@ -81,7 +85,11 @@ export default function AdminDashboard() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate("/admin/login");
+    if (onLogout) {
+      onLogout();
+    } else {
+      window.location.href = "/admin/login";
+    }
   };
 
   const updateOrderStatus = async (orderId: string, status: Order['status']) => {
@@ -350,7 +358,7 @@ export default function AdminDashboard() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        <FiLoader className="w-8 h-8 animate-spin text-gray-400" />
       </div>
     );
   }
@@ -399,7 +407,7 @@ export default function AdminDashboard() {
               activeTab === 'orders' ? "bg-emerald-50 text-emerald-700 font-medium" : "text-gray-600 hover:bg-gray-50"
             )}
           >
-            <ShoppingCart className="w-5 h-5" />
+            <FiShoppingCart className="w-5 h-5" />
             الطلبات
             {orders.filter(o => o.status === 'pending').length > 0 && (
               <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full mr-auto">
@@ -414,7 +422,7 @@ export default function AdminDashboard() {
               activeTab === 'products' ? "bg-emerald-50 text-emerald-700 font-medium" : "text-gray-600 hover:bg-gray-50"
             )}
           >
-            <Package className="w-5 h-5" />
+            <FiPackage className="w-5 h-5" />
             المنتجات
           </button>
           <button
@@ -424,7 +432,7 @@ export default function AdminDashboard() {
               activeTab === 'shipping' ? "bg-emerald-50 text-emerald-700 font-medium" : "text-gray-600 hover:bg-gray-50"
             )}
           >
-            <Truck className="w-5 h-5" />
+            <HiOutlineTruck className="w-5 h-5" />
             الشحن
           </button>
           
@@ -433,7 +441,7 @@ export default function AdminDashboard() {
               onClick={handleLogout}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-colors text-right"
             >
-              <LogOut className="w-5 h-5" />
+              <FiLogOut className="w-5 h-5" />
               تسجيل الخروج
             </button>
           </div>
@@ -527,7 +535,7 @@ export default function AdminDashboard() {
                 onClick={() => setShowAddProduct(true)}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl flex items-center justify-center gap-2 font-medium transition-colors"
               >
-                <Plus className="w-5 h-5" />
+                <FiPlus className="w-5 h-5" />
                 إضافة منتج جديد
               </button>
             </div>
@@ -553,7 +561,7 @@ export default function AdminDashboard() {
                     <div className="flex gap-4 items-center">
                       <div className="flex-1 relative">
                         <input type="file" accept="image/*" onChange={handleImageUpload} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" />
-                        {uploadingImage && <Loader2 className="w-5 h-5 animate-spin text-emerald-600 absolute left-4 top-1/2 -translate-y-1/2" />}
+                        {uploadingImage && <FiLoader className="w-5 h-5 animate-spin text-emerald-600 absolute left-4 top-1/2 -translate-y-1/2" />}
                       </div>
                       <div className="text-gray-400 text-sm">أو</div>
                       <input type="url" placeholder="رابط صورة خارجي (URL)" value={newProduct.imageUrl} onChange={e => setNewProduct({...newProduct, imageUrl: e.target.value})} className="flex-1 px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 bg-gray-50 focus:bg-white transition-all" dir="ltr" />
@@ -566,7 +574,7 @@ export default function AdminDashboard() {
                       <div>
                         <div className="relative">
                           <input type="file" accept="image/*" multiple onChange={handleAdditionalImageUpload} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" />
-                          {uploadingAdditional && <Loader2 className="w-5 h-5 animate-spin text-emerald-600 absolute left-4 top-1/2 -translate-y-1/2" />}
+                          {uploadingAdditional && <FiLoader className="w-5 h-5 animate-spin text-emerald-600 absolute left-4 top-1/2 -translate-y-1/2" />}
                         </div>
                         <p className="text-xs text-gray-500 mt-1">يمكنك اختيار عدة صور دفعة واحدة.</p>
                       </div>
@@ -590,7 +598,6 @@ export default function AdminDashboard() {
                     )}
                   </div>
 
-                  {/* المقاسات */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">المقاسات المتاحة</label>
                     <div className="flex gap-2">
@@ -625,7 +632,6 @@ export default function AdminDashboard() {
                     )}
                   </div>
 
-                  {/* الألوان */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">الألوان المتاحة</label>
                     <div className="flex gap-2">
@@ -675,7 +681,7 @@ export default function AdminDashboard() {
             {editingProduct && (
               <div id="edit-product-section" className="bg-white p-6 rounded-2xl shadow-sm border border-blue-200">
                 <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <Edit2 className="w-5 h-5 text-blue-600" />
+                  <FiEdit2 className="w-5 h-5 text-blue-600" />
                   تعديل المنتج: {editingProduct.name}
                 </h2>
                 <form onSubmit={handleEditProduct} className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -696,7 +702,7 @@ export default function AdminDashboard() {
                     <div className="flex gap-4 items-center">
                       <div className="flex-1 relative">
                         <input type="file" accept="image/*" onChange={handleEditImageUpload} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
-                        {editUploadingImage && <Loader2 className="w-5 h-5 animate-spin text-blue-600 absolute left-4 top-1/2 -translate-y-1/2" />}
+                        {editUploadingImage && <FiLoader className="w-5 h-5 animate-spin text-blue-600 absolute left-4 top-1/2 -translate-y-1/2" />}
                       </div>
                       <div className="text-gray-400 text-sm">أو</div>
                       <input type="url" placeholder="رابط صورة خارجي (URL)" value={editingProduct.imageUrl || ""} onChange={e => setEditingProduct({...editingProduct, imageUrl: e.target.value})} className="flex-1 px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition-all" dir="ltr" />
@@ -709,7 +715,7 @@ export default function AdminDashboard() {
                       <div>
                         <div className="relative">
                           <input type="file" accept="image/*" multiple onChange={handleEditAdditionalImageUpload} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
-                          {editUploadingAdditional && <Loader2 className="w-5 h-5 animate-spin text-blue-600 absolute left-4 top-1/2 -translate-y-1/2" />}
+                          {editUploadingAdditional && <FiLoader className="w-5 h-5 animate-spin text-blue-600 absolute left-4 top-1/2 -translate-y-1/2" />}
                         </div>
                         <p className="text-xs text-gray-500 mt-1">يمكنك اختيار عدة صور دفعة واحدة.</p>
                       </div>
@@ -733,7 +739,6 @@ export default function AdminDashboard() {
                     )}
                   </div>
 
-                  {/* المقاسات - تعديل */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">المقاسات المتاحة</label>
                     <div className="flex gap-2">
@@ -768,7 +773,6 @@ export default function AdminDashboard() {
                     )}
                   </div>
 
-                  {/* الألوان - تعديل */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">الألوان المتاحة</label>
                     <div className="flex gap-2">
@@ -830,7 +834,6 @@ export default function AdminDashboard() {
                     <div className="text-emerald-600 font-bold mb-3">{product.price.toLocaleString('ar-DZ')} د.ج</div>
                     <div className="text-sm text-gray-500 mb-4 line-clamp-2">{product.description}</div>
                     
-                    {/* عرض المقاسات والألوان في بطاقة المنتج */}
                     {(product.sizes && product.sizes.length > 0) && (
                       <div className="mb-2">
                         <span className="text-xs text-gray-500">المقاسات: </span>
@@ -873,7 +876,7 @@ export default function AdminDashboard() {
                           className="text-blue-500 hover:bg-blue-50 p-2 rounded-lg transition-colors"
                           title="تعديل المنتج"
                         >
-                          <Edit2 className="w-5 h-5" />
+                          <FiEdit2 className="w-5 h-5" />
                         </button>
                         <button 
                           type="button"
@@ -881,7 +884,7 @@ export default function AdminDashboard() {
                           className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"
                           title="حذف المنتج"
                         >
-                          <Trash2 className="w-5 h-5" />
+                          <FiTrash2 className="w-5 h-5" />
                         </button>
                       </div>
                     </div>

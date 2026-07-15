@@ -1,0 +1,9 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ShopHome from '../components/ShopHome.tsx';
+const currentPath = '/';
+---
+
+<BaseLayout title="Matjari-متجري - تسوق آمن وسهل" currentPath={currentPath}>
+  <ShopHome client:load />
+</BaseLayout>

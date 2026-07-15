@@ -1,17 +1,21 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import { Product } from "../types";
+import type { Product } from "../types";
 import { wilayas, getCommunesByWilayaId } from 'algeria-locations';
-import { ArrowRight, Loader2, CheckCircle2, ShieldCheck, Truck, RotateCcw, Eye, Sparkles, AlertCircle, ThumbsUp } from "lucide-react";
+import { FiLoader, FiCheckCircle, FiArrowRight } from "react-icons/fi";
+import { HiOutlineShieldCheck, HiOutlineTruck } from "react-icons/hi";
+import { IoEyeOutline } from "react-icons/io5";
+import { LuRotateCcw } from "react-icons/lu";
 import { cn } from "../lib/utils";
-import { getShippingRates, ShippingRate } from "../lib/shipping";
+import { getShippingRates } from "../lib/shipping";
+import type { ShippingRate } from "../lib/shipping";
 import { trackViewContent, trackLead, getMetaCookies, generateEventId } from "../lib/tracking";
 
-export default function ProductPage() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  
+interface ProductPageProps {
+  id: string;
+}
+
+export default function ProductPage({ id }: ProductPageProps) {
   const [product, setProduct] = useState<Product | null>(null);
   const [activeImage, setActiveImage] = useState<string>("");
   const [shippingRates, setShippingRates] = useState<ShippingRate[]>([]);
@@ -27,7 +31,7 @@ export default function ProductPage() {
     name: "",
     phone: "",
     address: "",
-    wilayaId: "16", // Default to Algiers (id: 16)
+    wilayaId: "16",
     baladiya: "",
     shippingType: "home"
   });
@@ -66,7 +70,7 @@ export default function ProductPage() {
 
   const shippingCost = useMemo(() => {
     const rate = shippingRates.find(r => r.wilaya_id === formData.wilayaId);
-    if (!rate) return formData.shippingType === 'home' ? 800 : 400; // default fallback
+    if (!rate) return formData.shippingType === 'home' ? 800 : 400;
     return formData.shippingType === 'home' ? rate.home_price : rate.desk_price;
   }, [shippingRates, formData.wilayaId, formData.shippingType]);
 
@@ -84,10 +88,6 @@ export default function ProductPage() {
 
       const { fbp, fbc } = getMetaCookies();
 
-      // نولّد المعرّفات محليًا قبل الإرسال، بدل قراءتها من قاعدة
-      // البيانات بعد الإدراج — لأن سياسة RLS الحالية تسمح بالإدراج
-      // للجميع لكن لا تسمح بالقراءة إلا للمستخدمين المسجّلين، وأي
-      // محاولة .select() بعد insert() كانت ستفشل بصمت للزبون العادي.
       const orderId = crypto.randomUUID();
       const leadEventId = generateEventId();
 
@@ -108,8 +108,6 @@ export default function ProductPage() {
           status: "pending",
           createdAt: new Date().toISOString(),
           lead_event_id: leadEventId,
-          // نحفظ بيانات المطابقة الآن، لأنها ستُفقد نهائيًا بعد إغلاق
-          // الزبون للمتصفح، ونحتاجها لاحقًا عند إرسال Purchase عند التسليم
           fbp,
           fbc,
           client_user_agent: navigator.userAgent,
@@ -117,8 +115,6 @@ export default function ProductPage() {
 
       if (error) throw error;
 
-      // نُطلق Lead بعد نجاح الحفظ الفعلي فقط، بنفس المعرّف الذي حُفظ
-      // مع الطلب — كتابة واحدة فقط، بلا حاجة لأي تحديث لاحق قد يُحجب.
       trackLead({
         eventId: leadEventId,
         value: totalAmount,
@@ -139,7 +135,7 @@ export default function ProductPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        <FiLoader className="w-8 h-8 animate-spin text-gray-400" />
       </div>
     );
   }
@@ -150,9 +146,9 @@ export default function ProductPage() {
         <div className="bg-red-50 text-red-600 p-6 rounded-xl border border-red-200 max-w-md w-full text-center">
           <h2 className="text-xl font-bold mb-2">خطأ في جلب المنتج</h2>
           <p className="text-sm mb-4" dir="ltr">{error}</p>
-          <button onClick={() => navigate('/')} className="text-emerald-600 hover:underline font-bold">
+          <a href="/" className="text-emerald-600 hover:underline font-bold inline-block">
             العودة للرئيسية
-          </button>
+          </a>
         </div>
       </div>
     );
@@ -162,14 +158,13 @@ export default function ProductPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
         <h2 className="text-xl font-bold mb-4">المنتج غير موجود</h2>
-        <button onClick={() => navigate('/')} className="text-emerald-600 hover:underline">
+        <a href="/" className="text-emerald-600 hover:underline">
           العودة للرئيسية
-        </button>
+        </a>
       </div>
     );
   }
 
-  // حساب السعر السابق لإظهار التخفيض وجذب العملاء لشراء المنتج وزيادة نسبة التحويل
   const originalPrice = Math.round((product.price * 1.35) / 100) * 100;
   const discountAmount = originalPrice - product.price;
 
@@ -177,29 +172,29 @@ export default function ProductPage() {
     <div className="pb-20 md:pb-12">
       <main className="max-w-5xl mx-auto px-4 mt-6">
         {/* Back Link */}
-        <button 
-          onClick={() => navigate('/')}
+        <a 
+          href="/"
           className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-emerald-600 mb-6 transition-colors group font-medium"
         >
-          <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+          <FiArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
           <span>العودة للتسوق</span>
-        </button>
+        </a>
 
         {success ? (
           <div className="bg-white md:rounded-2xl p-8 md:p-12 text-center max-w-md mx-auto mt-8 border border-gray-100 shadow-sm">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle2 className="w-8 h-8 text-green-600" />
+              <FiCheckCircle className="w-8 h-8 text-green-600" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">تم تسجيل طلبك بنجاح!</h2>
             <p className="text-gray-500 mb-8">
               سنتصل بك قريباً على الرقم <span className="font-bold text-gray-900" dir="ltr">{formData.phone}</span> لتأكيد الطلب.
             </p>
-            <button 
-              onClick={() => navigate('/')}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-emerald-200 transition-colors"
+            <a 
+              href="/"
+              className="block w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-emerald-200 transition-colors text-center"
             >
               العودة للتسوق
-            </button>
+            </a>
           </div>
         ) : (
           <div className="flex flex-col md:flex-row gap-0 md:gap-8 lg:gap-12 items-start">
@@ -262,19 +257,18 @@ export default function ProductPage() {
                   ))}
                 </div>
 
-                {/* Highly Trustworthy Conversion Badges (Trust Badges) */}
+                {/* Trust Badges */}
                 <div className="space-y-4">
                   <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-1">
-                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                    <HiOutlineShieldCheck className="w-4 h-4 text-emerald-600" />
                     ضمانات التسوق الآمن معنا:
                   </h3>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     
-                    {/* Badge 1 */}
                     <div className="flex gap-3 bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
                       <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 flex-shrink-0">
-                        <Eye className="w-5 h-5" />
+                        <IoEyeOutline className="w-5 h-5" />
                       </div>
                       <div>
                         <h4 className="text-xs font-bold text-gray-900 mb-0.5">افتح وافحص طردك بحريّة</h4>
@@ -282,10 +276,9 @@ export default function ProductPage() {
                       </div>
                     </div>
 
-                    {/* Badge 2 */}
                     <div className="flex gap-3 bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
                       <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 flex-shrink-0">
-                        <ShieldCheck className="w-5 h-5" />
+                        <HiOutlineShieldCheck className="w-5 h-5" />
                       </div>
                       <div>
                         <h4 className="text-xs font-bold text-gray-900 mb-0.5">الدفع عند الاستلام (COD)</h4>
@@ -293,10 +286,9 @@ export default function ProductPage() {
                       </div>
                     </div>
 
-                    {/* Badge 3 */}
                     <div className="flex gap-3 bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
                       <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600 flex-shrink-0">
-                        <RotateCcw className="w-5 h-5" />
+                        <LuRotateCcw className="w-5 h-5" />
                       </div>
                       <div>
                         <h4 className="text-xs font-bold text-gray-900 mb-0.5">استبدال واسترجاع مرن</h4>
@@ -304,10 +296,9 @@ export default function ProductPage() {
                       </div>
                     </div>
 
-                    {/* Badge 4 */}
                     <div className="flex gap-3 bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
                       <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600 flex-shrink-0">
-                        <Truck className="w-5 h-5" />
+                        <HiOutlineTruck className="w-5 h-5" />
                       </div>
                       <div>
                         <h4 className="text-xs font-bold text-gray-900 mb-0.5">توصيل سريع ومضمون</h4>
@@ -569,13 +560,13 @@ export default function ProductPage() {
                       )}
                     >
                       {submitting ? (
-                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <FiLoader className="w-5 h-5 animate-spin" />
                       ) : (
                         "تأكيد الطلب الآن"
                       )}
                     </button>
                     <p className="text-center text-sm text-gray-500 mt-4 flex items-center justify-center gap-1">
-                      <ShieldCheck className="w-4 h-4" />
+                      <HiOutlineShieldCheck className="w-4 h-4" />
                       الدفع يكون عند استلام المنتج
                     </p>
                   </div>

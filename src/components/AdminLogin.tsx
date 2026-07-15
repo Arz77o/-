@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
-import { useNavigate } from "react-router-dom";
-import { Loader2, Lock } from "lucide-react";
+import { FiLoader } from "react-icons/fi";
+import { HiOutlineLockClosed } from "react-icons/hi";
 
-export default function AdminLogin() {
+interface AdminLoginProps {
+  onLoginSuccess?: () => void;
+}
+
+export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const navigate = useNavigate();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session }, error }) => {
@@ -20,12 +23,16 @@ export default function AdminLogin() {
             setError("هذا الحساب ليس لديه صلاحيات الإدارة.");
           });
         } else {
-          navigate("/admin");
+          if (onLoginSuccess) {
+            onLoginSuccess();
+          } else {
+            window.location.href = "/admin";
+          }
         }
       }
       setLoading(false);
     });
-  }, [navigate]);
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +54,11 @@ export default function AdminLogin() {
         return;
       }
 
-      navigate("/admin");
+      if (onLoginSuccess) {
+        onLoginSuccess();
+      } else {
+        window.location.href = "/admin";
+      }
     } catch (err: any) {
       console.error(err);
       setError(err?.message || "حدث خطأ أثناء تسجيل الدخول.");
@@ -59,7 +70,7 @@ export default function AdminLogin() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 w-full max-w-md text-center">
         <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">
-          <Lock className="w-8 h-8 text-emerald-600" />
+          <HiOutlineLockClosed className="w-8 h-8 text-emerald-600" />
         </div>
         <h1 className="text-2xl font-bold text-gray-900 mb-2">تسجيل الدخول للإدارة</h1>
         <p className="text-sm text-gray-500 mb-8">أدخل البريد الإلكتروني وكلمة المرور الخاصة بك</p>
@@ -101,7 +112,7 @@ export default function AdminLogin() {
             disabled={loading}
             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-emerald-200 transition-colors flex items-center justify-center h-12 mt-6"
           >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "تسجيل الدخول"}
+            {loading ? <FiLoader className="w-5 h-5 animate-spin" /> : "تسجيل الدخول"}
           </button>
         </form>
       </div>

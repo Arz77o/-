@@ -1,0 +1,95 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+const currentPath = '/refund-policy';
+---
+
+<BaseLayout title="سياسة الإسترجاع و الإستبدال - Matjari-متجري" currentPath={currentPath}>
+  <div class="min-h-screen bg-gray-50 py-8 md:py-12" dir="rtl">
+    <div class="max-w-3xl mx-auto px-4">
+      <div class="flex items-center gap-4 mb-8">
+        <a
+          href="/"
+          class="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-gray-100 shadow-sm hover:bg-gray-100 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-700"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </a>
+        <h1 class="text-2xl font-bold text-gray-900">سياسة الإسترجاع و الإستبدال</h1>
+      </div>
+
+      <div class="bg-white rounded-3xl p-6 md:p-10 shadow-sm border border-gray-100">
+        <div class="flex items-center gap-3 mb-6 pb-6 border-b border-gray-100">
+          <div class="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">نهتم برضاكم دائماً</p>
+            <h2 class="text-xl font-bold text-gray-900">شروط إرجاع واستبدال المنتجات</h2>
+          </div>
+        </div>
+
+        <div class="space-y-8 text-gray-700 leading-relaxed">
+          <section>
+            <h3 class="text-lg font-bold text-gray-950 mb-3 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              الفترة الزمنية للإرجاع والاستبدال
+            </h3>
+            <p class="text-gray-600 pr-4">
+              تتيح سياسة متجرنا إمكانية إرجاع المنتجات أو استبدالها خلال فترة أقصاها <span class="font-semibold text-gray-900">3 أيام</span> من تاريخ استلام الطلب، شريطة أن يكون المنتج في حالته الأصلية.
+            </p>
+          </section>
+
+          <section>
+            <h3 class="text-lg font-bold text-gray-950 mb-3 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              الحالة الأصلية للمنتج
+            </h3>
+            <p class="text-gray-600 pr-4">
+              يجب أن تكون المنتجات المراد إرجاعها أو استبدالها غير مستخدمة، وفي تغليفها الأصلي السليم، مع الاحتفاظ بكافة الملحقات والبطاقات التعريفية (إن وجدت). لا يمكن إرجاع أي منتج تالف أو منقوص العبوة.
+            </p>
+          </section>
+
+          <section>
+            <h3 class="text-lg font-bold text-gray-950 mb-3 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              حالات المنتجات التالفة أو الخاطئة
+            </h3>
+            <p class="text-gray-600 pr-4">
+              إذا كان المنتج المستلم تالفاً أو مختلفاً عن الذي تم طلبه، فإننا نتحمل كافة تكاليف الشحن والتوصيل الإضافية لاستبداله أو إرجاعه، دون أي رسوم إضافية على العميل. يرجى مراجعة تفاصيل الطلب وتصوير المنتج والتواصل معنا فوراً.
+            </p>
+          </section>
+
+          <section>
+            <h3 class="text-lg font-bold text-gray-950 mb-3 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              تكاليف ورسوم الشحن
+            </h3>
+            <p class="text-gray-600 pr-4">
+              في حال كان الإرجاع أو الاستبدال بناءً على رغبة العميل (دون وجود عيب أو خطأ في المنتج)، يتحمل العميل رسوم توصيل الشحن الإضافية للإرجاع أو الاستبدال.
+            </p>
+          </section>
+
+          <section>
+            <h3 class="text-lg font-bold text-gray-950 mb-3 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              طريقة تقديم طلب الإرجاع أو الاستبدال
+            </h3>
+            <p class="text-gray-600 pr-4">
+              يسعدنا دائماً خدمتكم، لتقديم طلب الإرجاع أو الاستبدال، يرجى التواصل معنا عبر الواتساب أو الاتصال المباشر عبر الأرقام الموضحة في المتجر، وسيقوم فريق خدمة العملاء بالتنسيق معكم وترتيب استلام المنتج في أقرب وقت.
+            </p>
+          </section>
+        </div>
+
+        <div class="mt-10 pt-8 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-50 -mx-6 -mb-6 md:-mx-10 md:-mb-10 p-6 md:p-8 rounded-b-3xl">
+          <div class="flex items-center gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-600"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+            <div>
+              <p class="font-bold text-gray-900 text-sm">تسوق آمن وموثوق %100</p>
+              <p class="text-xs text-gray-500">نحن هنا لضمان تجربة تسوق ممتازة وفريدة</p>
+            </div>
+          </div>
+          <a href="/" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-6 py-2.5 rounded-xl transition-colors text-sm shadow-sm">العودة للمتجر والطلب</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
