@@ -1,10 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import ProductPage from '../../components/ProductPage.tsx';
-export async function getStaticPaths() {
-  // Dynamic route - no static paths needed
-  return [];
-}
+
 const { id } = Astro.params;
 const currentPath = `/product/${id}`;
 ---

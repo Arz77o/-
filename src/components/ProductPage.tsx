@@ -115,6 +115,23 @@ export default function ProductPage({ id }: ProductPageProps) {
 
       if (error) throw error;
 
+      // إشعار تيليغرام — يعمل في الخلفية ولا يعطّل الطلب إذا فشل
+      supabase.functions.invoke("telegram-notify", {
+        body: {
+          orderId,
+          customerName: formData.name,
+          customerPhone: formData.phone,
+          customerWilaya: wilayaName,
+          productName: product.name,
+          quantity,
+          totalAmount,
+          selectedSize: selectedSize || null,
+          selectedColor: selectedColor || null,
+          address: formData.address,
+          createdAt: new Date().toISOString(),
+        }
+      }).catch(err => console.error("Telegram notify failed silently:", err));
+
       trackLead({
         eventId: leadEventId,
         value: totalAmount,

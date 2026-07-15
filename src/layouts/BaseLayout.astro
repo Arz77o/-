@@ -17,6 +17,7 @@ const { title = 'Matjari-متجري', currentPath = '/' } = Astro.props;
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="متجري — أفضل المنتجات بأفضل الأسعار مع التوصيل السريع إلى 58 ولاية والدفع عند الاستلام." />
     <meta name="facebook-domain-verification" content="yvtmgx0m2ehsldz8nqovvsflgtk9e0" />
     <title>{title}</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -40,7 +41,7 @@ const { title = 'Matjari-متجري', currentPath = '/' } = Astro.props;
     <!-- End Google Tag Manager (noscript) -->
 
     <div class="min-h-screen flex flex-col bg-gray-50 font-sans" dir="rtl">
-      <Navbar client:load currentPath={currentPath} />
+      <Navbar client:idle currentPath={currentPath} />
       <main class="flex-grow">
         <slot />
       </main>
