@@ -101,6 +101,17 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
     }
   };
 
+  const deleteOrder = async (orderId: string) => {
+    if (confirm("هل أنت متأكد من حذف هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء.")) {
+      try {
+        await supabase.from('orders').delete().eq('id', orderId);
+        fetchData();
+      } catch (error) {
+        console.error("Error deleting order:", error);
+      }
+    }
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploadingImage(true);
@@ -502,17 +513,26 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
                         </span>
                       </td>
                       <td className="p-4">
-                        <select 
-                          className="bg-white border border-gray-200 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2 outline-none"
-                          value={order.status}
-                          onChange={(e) => updateOrderStatus(order.id, e.target.value as Order['status'])}
-                        >
-                          <option value="pending">قيد الانتظار</option>
-                          <option value="confirmed">تأكيد</option>
-                          <option value="shipped">شحن</option>
-                          <option value="delivered">تم التوصيل</option>
-                          <option value="cancelled">إلغاء</option>
-                        </select>
+                        <div className="flex items-center gap-2">
+                          <select 
+                            className="bg-white border border-gray-200 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2 outline-none"
+                            value={order.status}
+                            onChange={(e) => updateOrderStatus(order.id, e.target.value as Order['status'])}
+                          >
+                            <option value="pending">قيد الانتظار</option>
+                            <option value="confirmed">تأكيد</option>
+                            <option value="shipped">شحن</option>
+                            <option value="delivered">تم التوصيل</option>
+                            <option value="cancelled">إلغاء</option>
+                          </select>
+                          <button
+                            onClick={() => deleteOrder(order.id)}
+                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+                            title="حذف الطلب"
+                          >
+                            <FiTrash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
