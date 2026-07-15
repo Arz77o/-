@@ -1,12 +1,18 @@
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
-import cloudflare from '@astrojs/cloudflare'; //[cite: 3]
+import cloudflare from '@astrojs/cloudflare';
 
 export default defineConfig({
-  output: 'server', // Keeps Server-Side Rendering (SSR) enabled
-  adapter: cloudflare(), // Switched from node()[cite: 3]
+  output: 'server',
+  adapter: cloudflare(),
   integrations: [react()],
+  // Add this block to handle images on Cloudflare:
+  image: {
+    service: {
+      entrypoint: 'astro/assets/services/noop'
+    }
+  },
   vite: {
     plugins: [tailwindcss()],
     resolve: {
