@@ -10,6 +10,7 @@ import { cn } from "../lib/utils";
 import { getShippingRates } from "../lib/shipping";
 import type { ShippingRate } from "../lib/shipping";
 import { trackViewContent, trackLead, getMetaCookies, generateEventId } from "../lib/tracking";
+import { isWilayaSupported, isDeskShippingAvailable, getWilayaSupportType } from "../lib/shippingConfig";
 
 interface ProductPageProps {
   initialProduct: Product;
@@ -52,6 +53,21 @@ export default function ProductPage({ initialProduct, initialShippingRates }: Pr
     if (!rate) return formData.shippingType === 'home' ? 800 : 400;
     return formData.shippingType === 'home' ? rate.home_price : rate.desk_price;
   }, [shippingRates, formData.wilayaId, formData.shippingType]);
+
+  const wilayaSupportType = useMemo(() => {
+    return getWilayaSupportType(formData.wilayaId);
+  }, [formData.wilayaId]);
+
+  const supportedWilayas = useMemo(() => {
+    return wilayas.filter(w => isWilayaSupported(w.id.toString()));
+  }, []);
+
+  // Force shipping type to 'home' if desk is not available for the selected wilaya
+  useEffect(() => {
+    if (formData.shippingType === 'desk' && !isDeskShippingAvailable(formData.wilayaId)) {
+      setFormData(prev => ({ ...prev, shippingType: 'home' }));
+    }
+  }, [formData.wilayaId, formData.shippingType]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -470,11 +486,16 @@ export default function ProductPage({ initialProduct, initialShippingRates }: Pr
                           <input type="radio" name="shippingType" value="home" checked={formData.shippingType === 'home'} onChange={(e) => setFormData({...formData, shippingType: e.target.value})} className="hidden" />
                           <span className="text-xs">توصيل للبيت</span>
                         </label>
-                        <label className={`flex items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all shadow-sm ${formData.shippingType === 'desk' ? 'border-emerald-500 bg-emerald-50/80 text-emerald-800 font-bold' : 'border-gray-200 bg-white hover:border-emerald-200 text-gray-600'}`}>
-                          <input type="radio" name="shippingType" value="desk" checked={formData.shippingType === 'desk'} onChange={(e) => setFormData({...formData, shippingType: e.target.value})} className="hidden" />
+                        <label className={`flex items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all shadow-sm ${formData.shippingType === 'desk' ? 'border-emerald-500 bg-emerald-50/80 text-emerald-800 font-bold' : 'border-gray-200 bg-white hover:border-emerald-200 text-gray-600'} ${!isDeskShippingAvailable(formData.wilayaId) ? 'opacity-40 cursor-not-allowed' : ''}`}>
+                          <input type="radio" name="shippingType" value="desk" checked={formData.shippingType === 'desk'} onChange={(e) => setFormData({...formData, shippingType: e.target.value})} className="hidden" disabled={!isDeskShippingAvailable(formData.wilayaId)} />
                           <span className="text-xs">استلام من مكتب الشحن</span>
                         </label>
                       </div>
+                      {wilayaSupportType === 'home_only' && (
+                        <p className="text-xs text-amber-600 mt-2 font-medium">
+                          ⚠ هذه الولاية تدعم التوصيل للمنزل فقط
+                        </p>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -489,7 +510,7 @@ export default function ProductPage({ initialProduct, initialShippingRates }: Pr
                           onChange={e => setFormData({ ...formData, wilayaId: e.target.value, baladiya: "" })}
                           className="w-full px-3 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 bg-white outline-none transition-all text-xs font-medium shadow-sm"
                         >
-                          {wilayas.map((w) => (
+                          {supportedWilayas.map((w) => (
                             <option key={w.id} value={w.id.toString()}>{w.code} - {w.name_ar}</option>
                           ))}
                         </select>

@@ -7,6 +7,7 @@ import { cn } from "../lib/utils";
 import { getShippingRates, updateShippingRate } from "../lib/shipping";
 import type { ShippingRate } from "../lib/shipping";
 import { wilayas } from "algeria-locations";
+import { getWilayaSupportType, isWilayaSupported } from "../lib/shippingConfig";
 
 interface AdminDashboardProps {
   onLogout?: () => void;
@@ -940,15 +941,21 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
                   {wilayas.map(wilaya => {
                     const rate = shippingRates.find(r => r.wilaya_id === wilaya.id.toString());
                     return (
-                      <tr key={wilaya.id} className="hover:bg-gray-50/50">
+                      <tr key={wilaya.id} className={`hover:bg-gray-50/50 ${!isWilayaSupported(wilaya.id.toString()) ? 'opacity-40 bg-gray-50' : ''}`}>
                         <td className="p-4 text-gray-500 font-medium">{wilaya.code}</td>
-                        <td className="p-4 font-bold text-gray-900">{wilaya.name_ar}</td>
+                        <td className="p-4 font-bold text-gray-900">
+                          {wilaya.name_ar}
+                          {getWilayaSupportType(wilaya.id.toString()) === 'full' && <span className="mr-2 text-emerald-500 text-xs" title="مدعومة بالكامل">✅</span>}
+                          {getWilayaSupportType(wilaya.id.toString()) === 'home_only' && <span className="mr-2 text-amber-500 text-xs" title="توصيل للمنزل فقط">🏠</span>}
+                          {getWilayaSupportType(wilaya.id.toString()) === 'none' && <span className="mr-2 text-red-500 text-xs" title="غير مدعومة">❌</span>}
+                        </td>
                         <td className="p-4">
                           <input
                             type="number"
                             value={rate?.home_price || 800}
                             onChange={(e) => handleShippingUpdate(wilaya.id.toString(), 'home', Number(e.target.value))}
-                            className="w-32 px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 bg-white"
+                            disabled={!isWilayaSupported(wilaya.id.toString())}
+                            className={`w-32 px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition-all ${!isWilayaSupported(wilaya.id.toString()) ? 'bg-gray-100 cursor-not-allowed opacity-50' : 'bg-white'}`}
                           />
                         </td>
                         <td className="p-4">
@@ -956,7 +963,8 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
                             type="number"
                             value={rate?.desk_price || 400}
                             onChange={(e) => handleShippingUpdate(wilaya.id.toString(), 'desk', Number(e.target.value))}
-                            className="w-32 px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 bg-white"
+                            disabled={!isWilayaSupported(wilaya.id.toString())}
+                            className={`w-32 px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 transition-all ${!isWilayaSupported(wilaya.id.toString()) ? 'bg-gray-100 cursor-not-allowed opacity-50' : 'bg-white'}`}
                           />
                         </td>
                       </tr>
